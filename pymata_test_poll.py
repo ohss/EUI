@@ -37,19 +37,55 @@ import mido
 from PyMata.pymata import PyMata
 from mido import Message
 
-# Bending sensors
-BENDX1 = 0
-BENDX2 = 1
-BENDY1 = 2
-BENDY2 = 3
-NOTE1 = 4
+# Refresh rate in ms
+RATE = 30
 
+# Bending sensors pins
+BENDING_PINS = [0,1,2,3]
+
+# Note pins
+NOTE_PINS = [4]
+# Default scale is C Major: C, D, E, F, G, A, B
+# Scales should be at the -1 octave and are transposed
+# up by OCTAVE octaves
+SCALE = [0, 2, 4, 5, 7, 11]
+NOTE_ON = [False, False, False, False, False, False, False, False]
+OCTAVE = 3
+NOTE_TRESHOLD = 512
+
+offset = 0
 count = 0
 
 # create a PyMata instance
 board = PyMata("/dev/cu.usbmodem641", False, False)
 
+# def cb_note_on(data):
+#     print("NOTE ON")
+#     print(data)
+#     #print("NOTE ON from pin: %d with data: %d" % (data[1], data[2]))
+#     latch = board.get_analog_latch_data(NOTES[0])
+#     print(latch)
+#     print("ReArming!")
+#     board.set_analog_latch(data[1], board.ANALOG_LATCH_GTE, NOTE_TRESHOLD, cb_note_on)
+#     #board.set_analog_latch(4, board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
+#     latch = board.get_analog_latch_data(NOTES[0])
+#     print(latch)
+#
+# def cb_note_off(data):
+#     print("NOTE OFF")
+#     print(data)
+#     #print("NOTE OFF from pin: %d with data: %d" % (data[1], data[2]))
+#     latch = board.get_analog_latch_data(NOTES[0])
+#     print(latch)
+#     print("ReArming!")
+#     board.set_analog_latch(data[1], board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
+#     #board.set_analog_latch(4, board.ANALOG_LATCH_GTE, NOTE_TRESHOLD, cb_note_on)
+#     latch = board.get_analog_latch_data(NOTES[0])
+#     print(latch)
 
+
+
+# Interrupt handler
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!!!!')
     if board is not None:
@@ -60,45 +96,83 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # set pin modes
-board.set_pin_mode(BENDX1, board.INPUT, board.ANALOG)
-board.set_pin_mode(BENDX2, board.INPUT, board.ANALOG)
-board.set_pin_mode(BENDY1, board.INPUT, board.ANALOG)
-board.set_pin_mode(BENDY2, board.INPUT, board.ANALOG)
+for pin in BENDING_PINS:
+    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
+
+for pin in NOTE_PINS:
+    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
+    #board.set_analog_latch(pin, board.ANALOG_LATCH_GTE, NOTE_TRESHOLD)
+    #board.set_analog_latch(pin, board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
 
 # set sampling interval
-board.set_sampling_interval(30)
+board.set_sampling_interval(RATE)
 
 
-# do nothing loop - program exits when latch data event occurs for potentiometer
+# sleep for a while to wait for board initialization
 time.sleep(2)
-offset = 0
 note_on = False
 
 #Initialize mido
 out = mido.open_output()
 
+#Calibration
+note = board.analog_read(NOTE_PINS[0])
+print("NOTE[0]: %i" % note)
 
+
+def handle_notes():
+    #Check all notes
+    for idx, pin in enumerate(NOTE_PINS):
+        value = board.analog_read(NOTE_PINS[idx])
+        note_value = SCALE[idx]+(OCTAVE*12)
+        #print("index: %i pin: %i value: %i note: %i" % (idx, NOTE_PINS[idx], value, SCALE[idx]))
+        if(value >= NOTE_TRESHOLD and not NOTE_ON[idx]):
+            print("NOTE %i ON" % note_value)
+            NOTE_ON[idx] = True
+            note_msg = Message("note_on", note=note_value, velocity=64)
+            out.send(note_msg)
+        elif(value < (NOTE_TRESHOLD*0.9) and NOTE_ON[idx]):
+            print("NOTE %i OFF"% note_value)
+            NOTE_ON[idx] = False
+            note_msg = Message("note_off", note=note_value)
+            out.send(note_msg)
+        elif((value >= NOTE_TRESHOLD) and NOTE_ON[idx]):
+            after_value = ((value-512)/4)-1
+            print("%i AFTERTOUCH: %i"% (SCALE[idx], after_value))
+            after_msg = Message("aftertouch", value=after_value)
+
+
+def handle_bend():
+
+    x1 = board.analog_read(BENDING_PINS[0])
+    x2 = board.analog_read(BENDING_PINS[1])
+    y1 = board.analog_read(BENDING_PINS[2])
+    y2 = board.analog_read(BENDING_PINS[3])
+
+    #Calibrate in the beginning
+    if count == 1:
+        print("Calculating offset: x: %d y:%d" % (((x1+x2)/2), ((y1+y2)/2)))
+        offset = ((x1+x2)/2) - ((y1+y2)/2)
+
+    bend = ((x1+x2)/2) - ((y1+y2)/2)
+
+    bend = bend*64
+    bend = max(min(8191, bend), -8192)
+    #print("Bend: %d x1:%d x2:%d y1:%d y2:%d offset: %d" % (bend, x1, x2, y1, y2, offset))
+
+    bend_msg = Message("pitchwheel", pitch=bend)
+    out.send(bend_msg)
 
 while 1:
     count += 1
     if count == 100000:
         print('bye bye')
         board.close()
-    x1 = board.analog_read(BENDX1)
-    x2 = board.analog_read(BENDX2)
-    y1 = board.analog_read(BENDY1)
-    y2 = board.analog_read(BENDY2)
 
-    if count == 1:
-        print("Calculating offset: x: %d y:%d" % (((x1+x2)/2), ((y1+y2)/2)))
-        offset = ((x1+x2)/2) - ((y1+y2)/2)
+    #handle_bend()
+    handle_notes()
+    #response = board.get_analog_response_table()
+    #print(response)
+    # Handle buttons
 
-    bend = ((x1+x2)/2) - ((y1+y2)/2) - (offset)
-
-    bend = bend*64
-    bend = max(min(8191, bend), -8192)
-    print("Bend: %d x1:%d x2:%d y1:%d y2:%d offset: %d" % (bend, x1, x2, y1, y2, offset))
-
-    msg = Message("pitchwheel", pitch=bend)
-    out.send(msg)
-    time.sleep(0.03)
+    time.sleep(RATE*0.001)
