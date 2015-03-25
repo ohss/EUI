@@ -37,14 +37,10 @@ import mido
 from PyMata.pymata import PyMata
 from mido import Message
 
-# Refresh rate in ms
-RATE = 30
+RATE = 30   # Refresh rate in ms
+BENDING_PINS = [0,1,2,3] # Bending sensors pins
+NOTE_PINS = [2,3,4,5] # Note pins
 
-# Bending sensors pins
-BENDING_PINS = [0,1,2,3]
-
-# Note pins
-NOTE_PINS = [4]
 # Default scale is C Major: C, D, E, F, G, A, B
 # Scales should be at the -1 octave and are transposed
 # up by OCTAVE octaves
@@ -59,32 +55,6 @@ count = 0
 # create a PyMata instance
 board = PyMata("/dev/cu.usbmodem641", False, False)
 
-# def cb_note_on(data):
-#     print("NOTE ON")
-#     print(data)
-#     #print("NOTE ON from pin: %d with data: %d" % (data[1], data[2]))
-#     latch = board.get_analog_latch_data(NOTES[0])
-#     print(latch)
-#     print("ReArming!")
-#     board.set_analog_latch(data[1], board.ANALOG_LATCH_GTE, NOTE_TRESHOLD, cb_note_on)
-#     #board.set_analog_latch(4, board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
-#     latch = board.get_analog_latch_data(NOTES[0])
-#     print(latch)
-#
-# def cb_note_off(data):
-#     print("NOTE OFF")
-#     print(data)
-#     #print("NOTE OFF from pin: %d with data: %d" % (data[1], data[2]))
-#     latch = board.get_analog_latch_data(NOTES[0])
-#     print(latch)
-#     print("ReArming!")
-#     board.set_analog_latch(data[1], board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
-#     #board.set_analog_latch(4, board.ANALOG_LATCH_GTE, NOTE_TRESHOLD, cb_note_on)
-#     latch = board.get_analog_latch_data(NOTES[0])
-#     print(latch)
-
-
-
 # Interrupt handler
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!!!!')
@@ -96,13 +66,14 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # set pin modes
-for pin in BENDING_PINS:
-    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
+#for pin in BENDING_PINS:
+#    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
 
 for pin in NOTE_PINS:
-    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
-    #board.set_analog_latch(pin, board.ANALOG_LATCH_GTE, NOTE_TRESHOLD)
-    #board.set_analog_latch(pin, board.ANALOG_LATCH_LT, NOTE_TRESHOLD, cb_note_off)
+    #For Analog input
+    #board.set_pin_mode(pin, board.INPUT, board.ANALOG)
+    #For Digital input
+    board.set_pin_mode(pin, board.INPUT, board.DIGITAL)
 
 # set sampling interval
 board.set_sampling_interval(RATE)
@@ -120,7 +91,7 @@ note = board.analog_read(NOTE_PINS[0])
 print("NOTE[0]: %i" % note)
 
 
-def handle_notes():
+def handle_notes_analog():
     #Check all notes
     for idx, pin in enumerate(NOTE_PINS):
         value = board.analog_read(NOTE_PINS[idx])
@@ -139,8 +110,24 @@ def handle_notes():
         elif((value >= NOTE_TRESHOLD) and NOTE_ON[idx]):
             after_value = ((value-512)/4)-1
             print("%i AFTERTOUCH: %i"% (SCALE[idx], after_value))
-            after_msg = Message("aftertouch", value=after_value)
+            after_msg = Message("aftertouch", value=int(after_value))
+            out.send(after_msg)
 
+def handle_notes_digital():
+    for idx, pin in enumerate(NOTE_PINS):
+        value = board.digital_read(NOTE_PINS[idx])
+        note_value = SCALE[idx]+(OCTAVE*12)
+        print("NOTE %i VALUE: %s" % (note_value, value))
+        if(value == 0 and not NOTE_ON[idx]):
+            print("NOTE %i ON" % note_value)
+            NOTE_ON[idx] = True
+            note_msg = Message("note_on", note=note_value, velocity=64)
+            out.send(note_msg)
+        elif(value == 1 and NOTE_ON[idx]):
+            print("NOTE %i OFF"% note_value)
+            NOTE_ON[idx] = False
+            note_msg = Message("note_off", note=note_value)
+            out.send(note_msg)
 
 def handle_bend():
 
@@ -170,9 +157,6 @@ while 1:
         board.close()
 
     #handle_bend()
-    handle_notes()
-    #response = board.get_analog_response_table()
-    #print(response)
-    # Handle buttons
+    handle_notes_digital()
 
     time.sleep(RATE*0.001)
