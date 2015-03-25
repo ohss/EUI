@@ -37,6 +37,8 @@ import mido
 from PyMata.pymata import PyMata
 from mido import Message
 
+import serial.tools.list_ports
+
 RATE = 30   # Refresh rate in ms
 BENDING_PINS = [0,1,2,3] # Bending sensors pins
 BEND_CAL = [{'min': 0, 'max': 0, 'center': None},
@@ -57,8 +59,21 @@ offset = 0
 count = 0
 calibrate = 1
 
-# create a PyMata instance
-board = PyMata("/dev/cu.usbmodem641", False, False)
+# create a PyMata instances
+
+print ("Available ports:")
+ports = serial.tools.list_ports.comports()
+for port in ports:
+    print port[0]
+
+try:
+    # select the right board from [x][0]
+    board = PyMata(ports[0][0], False, False) 
+    print ("Board is on %s port" % (ports[0][0]))
+    # acc_board = PyMata(ports[1][0], False, False)
+    # print ("Acc_board is on %s port" % (ports[1][0]))
+except:
+    print ("Please select valid COM-ports!")
 
 # Interrupt handler
 def signal_handler(sig, frame):

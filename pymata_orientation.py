@@ -1,9 +1,18 @@
 import mido
 import serial
+import serial.tools.list_ports
 import time
 
-orientation_serial = serial.Serial("/dev/tty.usbserial-A90RR5T1", 9600)
-time.sleep(1)
+print ("Available ports:")
+ports = serial.tools.list_ports.comports()
+for port in ports:
+    print port[0]
+
+try:
+    serial_input = serial.Serial(ports[0], 9600)
+    print ("On port %s" % (ports[0][0]))
+except:
+    print ("Please select valid COM-ports!")
 
 out = mido.open_output()
 
@@ -13,14 +22,14 @@ yawStart = 0
 first_value = True
 
 def get_orientation():
-    orientation_input = orientation_serial.readline().strip().split("\t")
+    orientation = serial_input.readline().strip().split("\t")
 
     #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
     while True:
         try: 
-            roll = float(orientation_input[0])
-            pitch = float(orientation_input[1])
-            yaw = float(orientation_input[2])
+            roll = float(orientation[0])
+            pitch = float(orientation[1])
+            yaw = float(orientation[2])
             break
         except ValueError:
             print "again"
@@ -39,18 +48,6 @@ def get_orientation():
     yaw -= yawStart;
 
     return {'roll': roll, 'pitch': pitch, 'yaw': yaw}
-
-def translate(value, leftMin, leftMax, rightMin, rightMax):
-    # Figure out how 'wide' each range is
-    leftSpan = leftMax - leftMin
-    rightSpan = rightMax - rightMin
-
-    # Convert the left range into a 0-1 range (float)
-    valueScaled = float(value - leftMin) / float(leftSpan)
-
-    # Convert the 0-1 range into a value in the right range.
-    value_ranged = int(rightMin + (valueScaled * rightSpan))
-    return max(min(rightMax, value_ranged), 0)
 
 # Maps a value from [-maxReading, maxReading] to [0,127]
 def map_angle_to_control(angle, maxReading, maxOutput):
@@ -76,9 +73,6 @@ while True:
 
     roll_fx = map_angle_to_control(roll)
     pitch_fx = map_angle_to_control(pitch)
-    print (roll, " ", roll_fx)
-    print (pitch, " ", pitch_fx)
-    # pitch_fx = 0
 
     roll_msg = mido.Message("control_change", control=1, value=roll_fx)
     pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
