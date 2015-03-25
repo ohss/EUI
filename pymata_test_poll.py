@@ -29,7 +29,7 @@ When the potentiometer exceeds a raw value of 1000, the program is terminated.
 There are some major problems with PySerial 2.7 running on Python 3.4. Polling should only be used with Python 2.7
 """
 
-import sys
+import sys, os, select
 import time
 import signal
 import mido
@@ -39,18 +39,23 @@ from mido import Message
 
 RATE = 30   # Refresh rate in ms
 BENDING_PINS = [0,1,2,3] # Bending sensors pins
-NOTE_PINS = [2,3,4,5] # Note pins
+BEND_CAL = [{'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None}]
+NOTE_PINS = [2,3,4,5,6,7,8,9] # Note pins
 
 # Default scale is C Major: C, D, E, F, G, A, B
 # Scales should be at the -1 octave and are transposed
 # up by OCTAVE octaves
-SCALE = [0, 2, 4, 5, 7, 11]
+SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
 OCTAVE = 3
 NOTE_TRESHOLD = 512
 
 offset = 0
 count = 0
+calibrate = 1
 
 # create a PyMata instance
 board = PyMata("/dev/cu.usbmodem641", False, False)
@@ -66,8 +71,8 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # set pin modes
-#for pin in BENDING_PINS:
-#    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
+for pin in BENDING_PINS:
+    board.set_pin_mode(pin, board.INPUT, board.ANALOG)
 
 for pin in NOTE_PINS:
     #For Analog input
@@ -117,7 +122,7 @@ def handle_notes_digital():
     for idx, pin in enumerate(NOTE_PINS):
         value = board.digital_read(NOTE_PINS[idx])
         note_value = SCALE[idx]+(OCTAVE*12)
-        print("NOTE %i VALUE: %s" % (note_value, value))
+        #print("NOTE %i VALUE: %s" % (note_value, value))
         if(value == 0 and not NOTE_ON[idx]):
             print("NOTE %i ON" % note_value)
             NOTE_ON[idx] = True
@@ -128,27 +133,44 @@ def handle_notes_digital():
             NOTE_ON[idx] = False
             note_msg = Message("note_off", note=note_value)
             out.send(note_msg)
+def scale(value, index):
+    OldRange = (BEND_CAL[index]['max'] - BEND_CAL[index]['min'])
+    NewRange = (8191 - (-8192))
+    NewValue = (((value - BEND_CAL[index]['min']) * NewRange) / OldRange) + (-8192)
+    return NewValue
 
-def handle_bend():
+def handle_bend(calibrate):
 
-    x1 = board.analog_read(BENDING_PINS[0])
-    x2 = board.analog_read(BENDING_PINS[1])
-    y1 = board.analog_read(BENDING_PINS[2])
-    y2 = board.analog_read(BENDING_PINS[3])
+    sensor = [0,0,0,0]
 
-    #Calibrate in the beginning
-    if count == 1:
-        print("Calculating offset: x: %d y:%d" % (((x1+x2)/2), ((y1+y2)/2)))
-        offset = ((x1+x2)/2) - ((y1+y2)/2)
+    if(calibrate):
+        for i, axis in enumerate(BEND_CAL):
+            cur_val = board.analog_read(BENDING_PINS[i])
+            if (cur_val > BEND_CAL[i]['max']):
+                BEND_CAL[i]['max'] = cur_val
+            if (cur_val < BEND_CAL[i]['min']):
+                BEND_CAL[i]['min'] = cur_val
+            if (BEND_CAL[i]['center'] == None):
+                BEND_CAL[i]['center'] = cur_val
+            else:
+                BEND_CAL[i]['center'] = (BEND_CAL[i]['center']+cur_val)/2
 
-    bend = ((x1+x2)/2) - ((y1+y2)/2)
-
-    bend = bend*64
-    bend = max(min(8191, bend), -8192)
-    #print("Bend: %d x1:%d x2:%d y1:%d y2:%d offset: %d" % (bend, x1, x2, y1, y2, offset))
-
-    bend_msg = Message("pitchwheel", pitch=bend)
-    out.send(bend_msg)
+            print("CALIBRATE: Axis: %i min: %i max: %i center: %i" % (i,BEND_CAL[i]['min'], BEND_CAL[i]['max'], BEND_CAL[i]['center']))
+        return
+    else:
+        for i, axis in enumerate(BENDING_PINS):
+            sensor[i] = board.analog_read(BENDING_PINS[i])
+            scaled = scale(sensor[i], i)
+            #print ("Orig: %i Scaled: %i Diff: %i" % (sensor[i], scaled, (scaled - scale(BEND_CAL[i]['center'], i))))
+            sensor[i] = scaled
+    #
+    # bend = ((x1+x2)/2) - ((y1+y2)/2)
+    # bend = bend*64
+    # bend = max(min(8191, bend), -8192)
+    # print("Bend: %d x1:%d x2:%d y1:%d y2:%d offset: %d" % (bend, x1, x2, y1, y2, offset))
+    #
+    # bend_msg = Message("pitchwheel", pitch=bend)
+    # out.send(bend_msg)
 
 while 1:
     count += 1
@@ -156,7 +178,12 @@ while 1:
         print('bye bye')
         board.close()
 
-    #handle_bend()
+    handle_bend(calibrate)
     handle_notes_digital()
+
+    # Check for calibration end
+    if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        line = raw_input()
+        calibrate = False
 
     time.sleep(RATE*0.001)
