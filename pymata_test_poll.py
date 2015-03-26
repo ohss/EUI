@@ -70,10 +70,11 @@ try:
     # select the right board from [x][0]
     board = PyMata(ports[0][0], False, False) 
     print ("Board is on %s port" % (ports[0][0]))
-    # acc_board = PyMata(ports[1][0], False, False)
-    # print ("Acc_board is on %s port" % (ports[1][0]))
+    acc_board = serial.Serial(ports[1][0], 9600)
+    print ("Acc_board is on %s port" % (ports[1][0]))
 except:
     print ("Please select valid COM-ports!")
+    sys.exit(0)
 
 # Interrupt handler
 def signal_handler(sig, frame):

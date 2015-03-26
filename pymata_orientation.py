@@ -2,6 +2,7 @@ import mido
 import serial
 import serial.tools.list_ports
 import time
+import sys
 
 print ("Available ports:")
 ports = serial.tools.list_ports.comports()
@@ -9,10 +10,11 @@ for port in ports:
     print port[0]
 
 try:
-    serial_input = serial.Serial(ports[0], 9600)
+    serial_input = serial.Serial(ports[0][0], 9600)
     print ("On port %s" % (ports[0][0]))
 except:
     print ("Please select valid COM-ports!")
+    sys.exit(0)
 
 out = mido.open_output()
 
@@ -22,11 +24,11 @@ yawStart = 0
 first_value = True
 
 def get_orientation():
-    orientation = serial_input.readline().strip().split("\t")
 
     #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
     while True:
         try: 
+            orientation = serial_input.readline().strip().split("\t")
             roll = float(orientation[0])
             pitch = float(orientation[1])
             yaw = float(orientation[2])
