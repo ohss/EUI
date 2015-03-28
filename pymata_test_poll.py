@@ -52,14 +52,20 @@ NOTE_PINS = [2,3,4,5,6,7,8,9] # Note pins
 # up by OCTAVE octaves
 SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
-OCTAVE = 3
+OCTAVE = 5
 NOTE_TRESHOLD = 512
 
 offset = 0
 count = 0
 calibrate = 1
 
-# create a PyMata instances
+# Globals for orientation
+rollStart = 0
+pitchStart = 0
+yawStart = 0
+first_value = True
+
+# create a PyMata and a Serial instance
 
 print ("Available ports:")
 ports = serial.tools.list_ports.comports()
@@ -69,10 +75,11 @@ for port in ports:
 try:
     # select the right board from [x][0]
     board = PyMata(ports[0][0], False, False) 
-    print ("Board is on %s port" % (ports[0][0]))
-    acc_board = serial.Serial(ports[1][0], 9600)
-    print ("Acc_board is on %s port" % (ports[1][0]))
-except:
+    print ("Board is on port: %s " % (ports[0][0]))
+    orientation_board = serial.Serial(ports[1][0], 9600)
+    print ("Orientation_board is on port: %s " % (orientation_board.port))
+except Exception as e:
+    print e
     print ("Please select valid COM-ports!")
     sys.exit(0)
 
@@ -141,6 +148,7 @@ def handle_notes_digital():
         #print("NOTE %i VALUE: %s" % (note_value, value))
         if(value == 0 and not NOTE_ON[idx]):
             print("NOTE %i ON" % note_value)
+            first_value = True
             NOTE_ON[idx] = True
             note_msg = Message("note_on", note=note_value, velocity=64)
             out.send(note_msg)
@@ -188,14 +196,64 @@ def handle_bend(calibrate):
     # bend_msg = Message("pitchwheel", pitch=bend)
     # out.send(bend_msg)
 
+def get_orientation():
+
+    #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
+    while True:
+        try: 
+            orientation = orientation_board.readline().strip().split("\t")
+            if len(orientation) > 2:
+                roll = float(orientation[0])
+                pitch = float(orientation[1])
+                yaw = float(orientation[2])
+                break
+        except ValueError:
+            print "again"
+
+    global first_value, rollStart, pitchStart, yawStart
+
+    if first_value:
+        print 'reset'
+        rollStart = roll;
+        pitchStart = pitch;
+        yawStart = yaw;
+        first_value  = False;
+
+    roll -= rollStart;
+    pitch -= pitchStart;
+    yaw -= yawStart;
+
+    return {'roll': roll, 'pitch': pitch, 'yaw': yaw}
+
+# Maps a value from [-maxReading, maxReading] to [0,127]
+def map_angle_to_control(angle, maxReading=180, maxOutput=127):
+    ranged_angle = min(abs(angle), maxReading) # if a reading is over 180 (which it shouldn't be!)
+    return int(ranged_angle * (float(maxOutput) / float(maxReading)))
+
 while 1:
     count += 1
     if count == 100000:
         print('bye bye')
         board.close()
 
+    orientation_values = get_orientation()
+
+    # print ("Roll: %f | Pitch: %f | Yaw: %f" % (orientation_values['roll'], orientation_values['pitch'], orientation_values['yaw']))
+
+    roll = orientation_values['roll']
+    pitch = orientation_values['pitch']
+
+    roll_fx = map_angle_to_control(roll)
+    pitch_fx = map_angle_to_control(pitch)
+
+    roll_msg = mido.Message("control_change", control=1, value=roll_fx)
+    pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
+    print roll_msg
+    out.send(roll_msg)
+
     handle_bend(calibrate)
     handle_notes_digital()
+
 
     # Check for calibration end
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:

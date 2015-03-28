@@ -11,7 +11,7 @@ for port in ports:
 
 try:
     serial_input = serial.Serial(ports[0][0], 9600)
-    print ("On port %s" % (ports[0][0]))
+    print ("On port %s" % (serial_input.port))
 except:
     print ("Please select valid COM-ports!")
     sys.exit(0)
@@ -33,7 +33,7 @@ def get_orientation():
             pitch = float(orientation[1])
             yaw = float(orientation[2])
             break
-        except ValueError:
+        except ValueError, IndexError:
             print "again"
 
     global first_value, rollStart, pitchStart, yawStart
@@ -52,19 +52,15 @@ def get_orientation():
     return {'roll': roll, 'pitch': pitch, 'yaw': yaw}
 
 # Maps a value from [-maxReading, maxReading] to [0,127]
-def map_angle_to_control(angle, maxReading, maxOutput):
-    control_val = abs(angle) * (float(maxOutput) / float(maxReading))
-    return max(min(127, int(control_val)),0)
+def map_angle_to_control(angle, maxReading=180, maxOutput=127):
+    ranged_angle = min(abs(angle), maxReading) # if a reading is over 180 (which it shouldn't be!)
+    return int(ranged_angle * (float(maxOutput) / float(maxReading)))
 
-note_msg = mido.Message("note_on", note=36, velocity=64)
+
+note_msg = mido.Message("note_on", note=64, velocity=64)
 out.send(note_msg)
 
 while True:
-    count += 1
-
-    if count > 100:
-        # first_value = True
-        count = 0
 
     orientation_values = get_orientation()
 
@@ -79,8 +75,6 @@ while True:
     roll_msg = mido.Message("control_change", control=1, value=roll_fx)
     pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
     out.send(roll_msg)
-    out.send(pitch_msg)
+    print roll_msg
+    #out.send(pitch_msg)
 
-
-    
-    
