@@ -10,13 +10,18 @@ for port in ports:
     print port[0]
 
 try:
-    serial_input = serial.Serial(ports[0][0], 9600)
+    serial_input = serial.Serial(ports[3][0], 9600)
     print ("On port %s" % (serial_input.port))
 except:
     print ("Please select valid COM-ports!")
     sys.exit(0)
 
-out = mido.open_output()
+print ("Available midi ports:")
+midiports = mido.get_output_names()
+for port in midiports:
+    print port
+
+out = mido.open_output(midiports[1])
 
 rollStart = 0
 pitchStart = 0
@@ -27,7 +32,7 @@ def get_orientation():
 
     #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
     while True:
-        try: 
+        try:
             orientation = serial_input.readline().strip().split("\t")
             roll = float(orientation[0])
             pitch = float(orientation[1])
@@ -72,9 +77,9 @@ while True:
     roll_fx = map_angle_to_control(roll)
     pitch_fx = map_angle_to_control(pitch)
 
-    roll_msg = mido.Message("control_change", control=1, value=roll_fx)
-    pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
+    roll_msg = mido.Message("control_change", control=2, value=roll_fx)
+    pitch_msg = mido.Message("control_change", control=1, value=pitch_fx)
     out.send(roll_msg)
     print roll_msg
-    #out.send(pitch_msg)
-
+    out.send(pitch_msg)
+    print pitch_msg
