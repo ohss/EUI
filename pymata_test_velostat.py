@@ -28,8 +28,8 @@ When the potentiometer exceeds a raw value of 1000, the program is terminated.
 
 There are some major problems with PySerial 2.7 running on Python 3.4. Polling should only be used with Python 2.7
 """
+
 import sys, os, select
-import py_compile
 import time
 import signal
 import mido
@@ -38,12 +38,13 @@ from PyMata.pymata import PyMata
 from mido import Message
 
 import serial.tools.list_ports
-RATE = 15   # Refresh rate in ms
+
+RATE = 30   # Refresh rate in ms
 BENDING_PINS = [0,1,2,3] # Bending sensors pins
-BEND_CAL = [{'min': sys.maxint, 'max': 0, 'center': None},
-            {'min': sys.maxint, 'max': 0, 'center': None},
-            {'min': sys.maxint, 'max': 0, 'center': None},
-            {'min': sys.maxint, 'max': 0, 'center': None}]
+BEND_CAL = [{'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None},
+            {'min': 0, 'max': 0, 'center': None}]
 NOTE_PINS = [2,3,4,5,6,7,8,9] # Note pins
 
 # Default scale is C Major: C, D, E, F, G, A, B
@@ -66,28 +67,22 @@ first_value = True
 
 # create a PyMata and a Serial instance
 
-py_compile.compile('pymata_test_poll.py')
-
-print ("Available serial ports:")
+print ("Available ports:")
 ports = serial.tools.list_ports.comports()
 for port in ports:
     print port[0]
 
 try:
     # select the right board from [x][0]
-    board = PyMata(ports[2][0], False, False)
-    print ("Board is on port: %s " % (ports[2][0]))
-    #orientation_board = serial.Serial(ports[3][0], 9600)
-    #print ("Orientation_board is on port: %s " % (orientation_board.port))
+    # board = PyMata(ports[0][0], False, False) 
+    board = PyMata("/dev/ttyACM0", False, False)
+    print ("Board is on port: %s " % (ports[0][0]))
+    # orientation_board = serial.Serial(ports[1][0], 9600)
+    # print ("Orientation_board is on port: %s " % (orientation_board.port))
 except Exception as e:
     print e
     print ("Please select valid COM-ports!")
     sys.exit(0)
-
-print ("Available midi ports:")
-midiports = mido.get_output_names()
-for port in midiports:
-    print port
 
 # Interrupt handler
 def signal_handler(sig, frame):
@@ -115,9 +110,15 @@ board.set_sampling_interval(RATE)
 
 # sleep for a while to wait for board initialization
 time.sleep(2)
+note_on = False
+
 #Initialize mido
-out_notes = mido.open_output(midiports[0])
-out_cc = mido.open_output(midiports[1])
+# out = mido.open_output()
+
+#Calibration
+note = board.analog_read(NOTE_PINS[0])
+print("NOTE[0]: %i" % note)
+
 
 def handle_notes_analog():
     #Check all notes
@@ -140,6 +141,7 @@ def handle_notes_analog():
             print("%i AFTERTOUCH: %i"% (SCALE[idx], after_value))
             after_msg = Message("aftertouch", value=int(after_value))
             out.send(after_msg)
+
 def handle_notes_digital():
     for idx, pin in enumerate(NOTE_PINS):
         value = board.digital_read(NOTE_PINS[idx])
@@ -150,17 +152,16 @@ def handle_notes_digital():
             first_value = True
             NOTE_ON[idx] = True
             note_msg = Message("note_on", note=note_value, velocity=64)
-            out_notes.send(note_msg)
+            out.send(note_msg)
         elif(value == 1 and NOTE_ON[idx]):
             print("NOTE %i OFF"% note_value)
             NOTE_ON[idx] = False
             note_msg = Message("note_off", note=note_value)
-            out_notes.send(note_msg)
-
-def scale(value, index, min_val=0, max_val=8192):
+            out.send(note_msg)
+def scale(value, index):
     OldRange = (BEND_CAL[index]['max'] - BEND_CAL[index]['min'])
-    NewRange = (max_val - min_val)
-    NewValue = (((value - BEND_CAL[index]['min']) * NewRange) / OldRange) + min_val
+    NewRange = (8191 - (-8192))
+    NewValue = (((value - BEND_CAL[index]['min']) * NewRange) / OldRange) + (-8192)
     return NewValue
 
 def handle_bend(calibrate):
@@ -168,7 +169,6 @@ def handle_bend(calibrate):
     sensor = [0,0,0,0]
 
     if(calibrate):
-        print("CALIBRATE: "),
         for i, axis in enumerate(BEND_CAL):
             cur_val = board.analog_read(BENDING_PINS[i])
             if (cur_val > BEND_CAL[i]['max']):
@@ -180,21 +180,14 @@ def handle_bend(calibrate):
             else:
                 BEND_CAL[i]['center'] = (BEND_CAL[i]['center']+cur_val)/2
 
-            print("(i: %i cur: %i min: %i max: %i ctr: %i)" % (i, cur_val, BEND_CAL[i]['min'], BEND_CAL[i]['max'], BEND_CAL[i]['center'])),
-        print("")
+            print("CALIBRATE: Axis: %i min: %i max: %i center: %i" % (i,BEND_CAL[i]['min'], BEND_CAL[i]['max'], BEND_CAL[i]['center']))
         return
     else:
-        bend = 0
         for i, axis in enumerate(BENDING_PINS):
             sensor[i] = board.analog_read(BENDING_PINS[i])
             scaled = scale(sensor[i], i)
-            print ("(i: %i org: %i dff: %i)" % (i, sensor[i], (sensor[i] - BEND_CAL[i]['center']))),
+            #print ("Orig: %i Scaled: %i Diff: %i" % (sensor[i], scaled, (scaled - scale(BEND_CAL[i]['center'], i))))
             sensor[i] = scaled
-        bend = (sensor[0] + sensor[1] - sensor[2] - sensor[3])/4
-        print(" bend: %i" % bend)
-        bend_msg = Message("pitchwheel", pitch=bend)
-        out_notes.send(bend_msg)
-
     #
     # bend = ((x1+x2)/2) - ((y1+y2)/2)
     # bend = bend*64
@@ -203,17 +196,17 @@ def handle_bend(calibrate):
     #
     # bend_msg = Message("pitchwheel", pitch=bend)
     # out.send(bend_msg)
+
 def get_orientation():
 
     #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
     while True:
-        try:
+        try: 
             orientation = orientation_board.readline().strip().split("\t")
             if len(orientation) > 2:
                 roll = float(orientation[0])
                 pitch = float(orientation[1])
                 yaw = float(orientation[2])
-                orientation_board.flushInput()
                 break
         except ValueError:
             print "again"
@@ -227,23 +220,16 @@ def get_orientation():
         yawStart = yaw;
         first_value  = False;
 
-    roll = normalise_degrees(roll-rollStart)
-    pitch = normalise_degrees(pitch-pitchStart)
-    yaw = normalise_degrees(yaw-yawStart)
+    roll -= rollStart;
+    pitch -= pitchStart;
+    yaw -= yawStart;
 
     return {'roll': roll, 'pitch': pitch, 'yaw': yaw}
 
-def normalise_degrees(degree):
-    if (degree < -180):
-        return degree%180
-    elif (degree > 180):
-        return degree%-180
-    else:
-        return degree
-
 # Maps a value from [-maxReading, maxReading] to [0,127]
 def map_angle_to_control(angle, maxReading=180, maxOutput=127):
-    return int(abs(angle) * (float(maxOutput) / float(maxReading)))
+    ranged_angle = min(abs(angle), maxReading) # if a reading is over 180 (which it shouldn't be!)
+    return int(ranged_angle * (float(maxOutput) / float(maxReading)))
 
 while 1:
     count += 1
@@ -252,23 +238,25 @@ while 1:
         board.close()
 
     # orientation_values = get_orientation()
-    #
+
     # print ("Roll: %f | Pitch: %f | Yaw: %f" % (orientation_values['roll'], orientation_values['pitch'], orientation_values['yaw']))
-    #
+
     # roll = orientation_values['roll']
-    # #pitch = orientation_values['pitch']
-    #
+    # pitch = orientation_values['pitch']
+
     # roll_fx = map_angle_to_control(roll)
-    # #pitch_fx = map_angle_to_control(pitch)
-    #
+    # pitch_fx = map_angle_to_control(pitch)
+
     # roll_msg = mido.Message("control_change", control=1, value=roll_fx)
-    # #pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
+    # pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
     # print roll_msg
-    # out_cc.send(roll_msg)
+    # out.send(roll_msg)
 
-    handle_bend(calibrate)
-    handle_notes_digital()
+    # handle_bend(calibrate)
+    # handle_notes_digital()
 
+    value = board.analog_read(0)
+    print(value)
 
     # Check for calibration end
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:

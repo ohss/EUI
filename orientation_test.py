@@ -50,16 +50,23 @@ def get_orientation():
         yawStart = yaw;
         first_value  = False;
 
-    roll -= rollStart;
-    pitch -= pitchStart;
-    yaw -= yawStart;
+    roll = normalise_degrees(roll-rollStart)
+    pitch = normalise_degrees(pitch-pitchStart)
+    yaw = normalise_degrees(yaw-yawStart)
 
     return {'roll': roll, 'pitch': pitch, 'yaw': yaw}
 
+def normalise_degrees(degree):
+    if (degree < -180):
+        return degree%180
+    elif (degree > 180):
+        return degree%-180
+    else:
+        return degree
+
 # Maps a value from [-maxReading, maxReading] to [0,127]
 def map_angle_to_control(angle, maxReading=180, maxOutput=127):
-    ranged_angle = min(abs(angle), maxReading) # if a reading is over 180 (which it shouldn't be!)
-    return int(ranged_angle * (float(maxOutput) / float(maxReading)))
+    return int(abs(angle) * (float(maxOutput) / float(maxReading)))
 
 
 note_msg = mido.Message("note_on", note=64, velocity=64)
