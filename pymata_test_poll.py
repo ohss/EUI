@@ -38,7 +38,7 @@ from PyMata.pymata import PyMata
 from mido import Message
 
 import serial.tools.list_ports
-RATE = 30   # Refresh rate in ms
+RATE = 15   # Refresh rate in ms
 BENDING_PINS = [0,1,2,3] # Bending sensors pins
 BEND_CAL = [{'min': sys.maxint, 'max': 0, 'center': None},
             {'min': sys.maxint, 'max': 0, 'center': None},
