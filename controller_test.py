@@ -1,38 +1,14 @@
 #!/usr/bin/env python
 
-__author__ = 'Copyright (c) 2015 Alan Yorinks All rights reserved.'
-
 """
-Copyright (c) 2015 Alan Yorinks All rights reserved.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU  General Public
-License as published by the Free Software Foundation; either
-version 3 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-"""
-
-"""
-This example illustrates using polling for digital input, analog input and analog latches.
-A switch is used to turn an LED on and off, and a potentiometer sets the intensity of a second LED.
-When the potentiometer exceeds a raw value of 1000, the program is terminated.
-
-There are some major problems with PySerial 2.7 running on Python 3.4. Polling should only be used with Python 2.7
+Copyright (c) 2015 All rights reserved.
 """
 import sys, os, select
 import py_compile
 import time
 import signal
 import mido
+import statistics
 from mido import Message
 import serial.tools.list_ports
 
@@ -42,6 +18,9 @@ BEND_CAL = [{'min': sys.maxint, 'max': 0, 'center': None},
             {'min': sys.maxint, 'max': 0, 'center': None},
             {'min': sys.maxint, 'max': 0, 'center': None}]
 
+AVG_DEV = 0
+RING_BUF = [None, None, None, None, None, None, None, None]
+
 # Default scale is C Major: C, D, E, F, G, A, B
 # Scales should be at the -1 octave and are transposed
 # up by OCTAVE octaves
@@ -49,14 +28,14 @@ SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
 LEDS = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 OCTAVE = 5
-NOTE_TRESHOLD = 512
+NOTE_ON_THRESHOLD = 180
+NOTE_OFF_THRESHOLD = -90
 
 offset = 0
 count = 0
 calibrate = True
 note_sensors = [0,0,0,0,0,0,0,0]
 bend_sensors = [0,0,0,0]
-
 
 # Globals for orientation
 rollStart = 0
@@ -101,24 +80,33 @@ signal.signal(signal.SIGINT, signal_handler)
 out_notes = mido.open_output(midiports[0])
 in_notes = mido.open_input(midiports[1])
 
+# Initialize ring buffer
+for i in range(0,8):
+    RING_BUF[i] = {'idx':0, 'data':[0,0,0,0,0,0,0,0]}
+
 def handle_notes(sensor_values):
     #Check all notes
-    for idx, axis in enumerate(sensor_values):
-        value = sensor_values[idx]
+    for idx in range(0,8):
+        value = 0
+        median = statistics.median(RING_BUF[idx]['data'])
+        for i in range(0,4):
+            value += RING_BUF[idx]['data'][(RING_BUF[idx]['idx'] - i)%8] - median
+        value = int(value / 4)
+
         note_value = SCALE[idx]+(OCTAVE*12)
         #print("index: %i pin: %i value: %i note: %i" % (idx, NOTE_PINS[idx], value, SCALE[idx]))
-        if(value >= NOTE_TRESHOLD and not NOTE_ON[idx]):
+        if(value >= NOTE_ON_THRESHOLD and not NOTE_ON[idx]):
             print("NOTE %i ON" % note_value)
             NOTE_ON[idx] = True
             note_msg = Message("note_on", note=note_value, velocity=64)
             out_notes.send(note_msg)
-        elif(value < (NOTE_TRESHOLD*0.9) and NOTE_ON[idx]):
+        elif(value < NOTE_OFF_THRESHOLD and NOTE_ON[idx]):
             print("NOTE %i OFF"% note_value)
             NOTE_ON[idx] = False
             note_msg = Message("note_off", note=note_value)
             out_notes.send(note_msg)
-        elif((value >= NOTE_TRESHOLD) and NOTE_ON[idx]):
-            after_value = ((value-512)/4)-1
+        elif(NOTE_ON[idx]):
+            after_value = abs(value)
             #print("%i AFTERTOUCH: %i"% (SCALE[idx], after_value))
             #after_msg = Message("aftertouch", value=int(after_value))
             #out_notes.send(after_msg)
@@ -162,28 +150,40 @@ def handle_bend(sensor_values, calibrate):
 
 def handle_leds():
 
+    had_input = False
+
     for msg in in_notes.iter_pending():
-        #print(msg)
+        had_input = True
         try:
             note = msg.note - 12*OCTAVE
             pin = SCALE.index(note)
-            print ("scaled note: %i" % note)
-            print ("pin of note: %i" % pin)
             if(msg.type == 'note_on'):
-                print("Note %i Pin %i led ON" % (msg.note, pin))
-                LEDS[pin*2] = 1
+                #print("Note %i Pin %i led ON" % (msg.note, pin)),
+                if(msg.velocity < 64):
+                    #print("Green")
+                    LEDS[pin*2] = 1 # set green led
+                    LEDS[pin*2 + 1] = 0 # reset red led
+                else:
+                    #print("Red")
+                    LEDS[pin*2] = 0
+                    LEDS[pin*2 + 1] = 1
             elif(msg.type == 'note_off'):
-                print("Note %i Pin %i led OFF" % (msg.note, pin))
+                #print("Note %i Pin %i led OFF" % (msg.note, pin))
                 LEDS[pin*2] = 0
+                LEDS[pin*2 + 1] = 0
         except:
-            print("Note not in scale %s" % msg)
-    try:
-        control_board.write(''.join(map(str, LEDS)));
-    except:
-        print("Write to board failed")
+            print("Warning: Message not a note or not in scale: %s" % msg)
+
+    if (had_input):
+        try:
+            num_bytes = control_board.write(''.join(map(str, LEDS)))
+            control_board.flush()
+        except:
+            print("Error: Write to board failed")
 
 def get_serial_data():
 
+    global RING_BUF
     #Occasionally there are errors on the strings read from serial, which causes ValueErrors when casted to float
     while True:
         try:
@@ -191,6 +191,11 @@ def get_serial_data():
             if len(sensors) == 12:
                 for i in range(0,8):
                     note_sensors[i] = int(sensors[i])
+                    #Fill the ring buffer
+                    #RING_BUF[RING_BUF_IDX] = note_sensors[i]
+                    #RING_BUF_IDX = (RING_BUF_IDX + 1) % 8
+                    RING_BUF[i]['data'][RING_BUF[i]['idx']] = note_sensors[i]
+                    RING_BUF[i]['idx'] = (RING_BUF[i]['idx'] + 1) % 8
                 for i in range(0,4):
                     bend_sensors[i] = int(sensors[i+8])
                 return True
@@ -207,17 +212,37 @@ while 1:
         print('bye bye')
         control_board.close()
 
+    if count == 100:
+        AVG_DEV = 0
+
+    # Check for serial input and handle incoming data
     read = get_serial_data()
-
     if read:
+        for x in range(0,8):
+            acc = 0
+            val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
+            median = statistics.median(RING_BUF[x]['data'])
+            for i in range(0,4):
+                acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
+            acc = int(acc / 4)
+            print("%i " % acc),
+            if(AVG_DEV < abs(acc)):
+                AVG_DEV = abs(acc)
+        print("")
 
-        #print("Note values: %s Bending values %s" % (note_sensors, bend_sensors))
-
-        handle_bend(bend_sensors, calibrate)
+        #if(acc >= 0):
+        #    print("Cur: %i Acc:  %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))
+        #else:
+        #    print("Cur: %i Acc: %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))
+        #print("Avg: %i Vel: %i Note values: %s Bending values %s" % (averange, velocity, note_sensors, bend_sensors))
+        #handle_bend(bend_sensors, calibrate)
         handle_notes(note_sensors)
-        handle_leds()
+
     else:
         print "Received no data!"
+
+    # Check MIDI input and write to Teensy on serial
+    handle_leds()
 
     # Check for calibration end
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
