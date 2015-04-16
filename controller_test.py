@@ -28,8 +28,11 @@ SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
 LEDS = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 OCTAVE = 5
-NOTE_ON_THRESHOLD = 180
-NOTE_OFF_THRESHOLD = -90
+NOTE_ON_THRESHOLD = 220
+NOTE_OFF_THRESHOLD = -100
+NOTE_OFF_RELATIVE_THRESHOLD = 0.7
+AFTER_TOUCH_CNT = 0
+AFTER_TOUCH_ITER_COUNT = 22
 
 offset = 0
 count = 0
@@ -82,12 +85,15 @@ in_notes = mido.open_input(midiports[1])
 
 # Initialize ring buffer
 for i in range(0,8):
-    RING_BUF[i] = {'idx':0, 'data':[0,0,0,0,0,0,0,0]}
+    RING_BUF[i] = {'idx':0, 'data':[0,0,0,0,0,0,0,0], 'thresh_val':0}
 
 def handle_notes(sensor_values):
+
+    global AFTER_TOUCH_CNT
     #Check all notes
     for idx in range(0,8):
         value = 0
+        raw_value = RING_BUF[idx]['data'][RING_BUF[idx]['idx']]
         median = statistics.median(RING_BUF[idx]['data'])
         for i in range(0,4):
             value += RING_BUF[idx]['data'][(RING_BUF[idx]['idx'] - i)%8] - median
@@ -98,18 +104,32 @@ def handle_notes(sensor_values):
         if(value >= NOTE_ON_THRESHOLD and not NOTE_ON[idx]):
             print("NOTE %i ON" % note_value)
             NOTE_ON[idx] = True
+            RING_BUF[idx]['treshold_val'] = RING_BUF[idx]['data'][RING_BUF[idx]['idx']]
+            AFTER_TOUCH_CNT = 0
             note_msg = Message("note_on", note=note_value, velocity=64)
             out_notes.send(note_msg)
-        elif(value < NOTE_OFF_THRESHOLD and NOTE_ON[idx]):
+        elif((value < NOTE_OFF_THRESHOLD and NOTE_ON[idx])): # Note OFF
             print("NOTE %i OFF"% note_value)
+            RING_BUF[idx]['treshold_val'] = 0
+            NOTE_ON[idx] = False
+            note_msg = Message("note_off", note=note_value)
+            out_notes.send(note_msg)
+        elif((raw_value <= RING_BUF[idx].get('treshold_val', 16000)*NOTE_OFF_RELATIVE_THRESHOLD) and NOTE_ON[idx]):
+            print("NOTE %i OFF value %i less than %i of threshold %i "% (note_value, raw_value,NOTE_OFF_RELATIVE_THRESHOLD, RING_BUF[idx]['treshold_val']))
+            RING_BUF[idx]['treshold_val'] = 0
             NOTE_ON[idx] = False
             note_msg = Message("note_off", note=note_value)
             out_notes.send(note_msg)
         elif(NOTE_ON[idx]):
-            after_value = abs(value)
-            #print("%i AFTERTOUCH: %i"% (SCALE[idx], after_value))
-            #after_msg = Message("aftertouch", value=int(after_value))
-            #out_notes.send(after_msg)
+            if (AFTER_TOUCH_CNT < AFTER_TOUCH_ITER_COUNT):
+                RING_BUF[idx]['treshold_val'] = (0.5*RING_BUF[idx]['treshold_val'] + 0.5*raw_value)
+                AFTER_TOUCH_CNT = AFTER_TOUCH_CNT + 1
+            else:
+                after_value = max((raw_value - RING_BUF[idx]['treshold_val']),0)
+                after_value = min(after_value, 127)
+                print("Trsh: %i Cur: %i Aftertouch: %i"% (RING_BUF[idx]['treshold_val'],raw_value, after_value))
+                after_msg = Message("aftertouch", value=int(after_value))
+                out_notes.send(after_msg)
 
 def scale(value, index, min_val=0, max_val=8192):
     OldRange = (BEND_CAL[index]['max'] - BEND_CAL[index]['min'])
@@ -134,7 +154,7 @@ def handle_bend(sensor_values, calibrate):
             else:
                 BEND_CAL[i]['center'] = (BEND_CAL[i]['center']+cur_val)/2
 
-            #print("(i: %i cur: %i min: %i max: %i ctr: %i)" % (i, cur_val, BEND_CAL[i]['min'], BEND_CAL[i]['max'], BEND_CAL[i]['center'])),
+            print("(i: %i cur: %i min: %i max: %i ctr: %i)" % (i, cur_val, BEND_CAL[i]['min'], BEND_CAL[i]['max'], BEND_CAL[i]['center'])),
         print("")
         return
     else:
@@ -211,6 +231,7 @@ while 1:
     if count == 100000:
         print('bye bye')
         control_board.close()
+        break
 
     if count == 100:
         AVG_DEV = 0
@@ -218,23 +239,25 @@ while 1:
     # Check for serial input and handle incoming data
     read = get_serial_data()
     if read:
-        for x in range(0,8):
-            acc = 0
-            val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
-            median = statistics.median(RING_BUF[x]['data'])
-            for i in range(0,4):
-                acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
-            acc = int(acc / 4)
-            print("%i " % acc),
-            if(AVG_DEV < abs(acc)):
-                AVG_DEV = abs(acc)
-        print("")
+
+        #Print acceleration
+        # for x in range(0,8):
+        #     acc = 0
+        #     val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
+        #     median = statistics.median(RING_BUF[x]['data'])
+        #     for i in range(0,4):
+        #         acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
+        #     acc = int(acc / 4)
+        #     print("%i " % acc),
+        #     if(AVG_DEV < abs(acc)):
+        #         AVG_DEV = abs(acc)
+        # print("")
 
         #if(acc >= 0):
         #    print("Cur: %i Acc:  %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))
         #else:
         #    print("Cur: %i Acc: %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))
-        #print("Avg: %i Vel: %i Note values: %s Bending values %s" % (averange, velocity, note_sensors, bend_sensors))
+        #print("Note values: %s Bending values %s" % (note_sensors, bend_sensors))
         #handle_bend(bend_sensors, calibrate)
         handle_notes(note_sensors)
 
