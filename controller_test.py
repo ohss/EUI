@@ -28,11 +28,11 @@ SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
 LEDS = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 OCTAVE = 5
-NOTE_ON_THRESHOLD = 220
-NOTE_OFF_THRESHOLD = -100
-NOTE_OFF_RELATIVE_THRESHOLD = 0.7
+NOTE_ON_THRESHOLD = 22
+NOTE_OFF_THRESHOLD = -25
+NOTE_OFF_RELATIVE_THRESHOLD = 0.98
 AFTER_TOUCH_CNT = 0
-AFTER_TOUCH_ITER_COUNT = 22
+AFTER_TOUCH_ITER_COUNT = 12
 
 offset = 0
 count = 0
@@ -241,17 +241,17 @@ while 1:
     if read:
 
         #Print acceleration
-        # for x in range(0,8):
-        #     acc = 0
-        #     val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
-        #     median = statistics.median(RING_BUF[x]['data'])
-        #     for i in range(0,4):
-        #         acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
-        #     acc = int(acc / 4)
-        #     print("%i " % acc),
-        #     if(AVG_DEV < abs(acc)):
-        #         AVG_DEV = abs(acc)
-        # print("")
+        for x in range(0,8):
+            acc = 0
+            val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
+            median = statistics.median(RING_BUF[x]['data'])
+            for i in range(0,4):
+                acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
+            acc = int(acc / 4)
+            print("%i " % acc),
+            if(AVG_DEV < abs(acc)):
+                AVG_DEV = abs(acc)
+        print("")
 
         #if(acc >= 0):
         #    print("Cur: %i Acc:  %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))
