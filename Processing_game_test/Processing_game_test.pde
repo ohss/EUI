@@ -3,22 +3,16 @@ import javax.sound.midi.MidiMessage; //Import the MidiMessage classes http://jav
 import javax.sound.midi.SysexMessage;
 import javax.sound.midi.ShortMessage;
 
-public static int BPM = 120;
 public static final int CC = 176;
 public static final int AFTERTOUCH = 208;
 public static final int PITCHBEND = 224;
 public static final int CTRL_CH = 0;
 public static final int GAME_CH = 1;
 
-public MidiBus myBus; // The MidiBus
-public int[] scale = {
-  0, 2, 4, 5, 7, 9, 10, 11
-}; // Current note scale
-public int octave = 5; // Current octave
-
-eventList currentNotes;
-int score;
-int abletonEventNoteNumber;
+public MidiBus myBus;   // The MidiBus
+eventList currentNotes; // List of notes and CC events that need to be completed
+int score;              // Current Score
+int abletonEventNoteNumber;  // The number of the note for the next Ableton Live loop
 
 void setup() {
   size(400, 400);
@@ -31,7 +25,7 @@ void setup() {
   myBus = new MidiBus(this, "IAC Bus 1", "IAC Bus 2"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
   currentNotes = new eventList();
   score = 0;
-  abletonEventNoteNumber = 2;
+  abletonEventNoteNumber = 2; // Magic number
 }
 
 void draw() {
@@ -42,9 +36,9 @@ void draw() {
     currentNotes.clear();
 
     //Send MIDI to go to next event in Ableton
-    myBus.sendNoteOn(GAME_CH, abletonEventNoteNumber, 127); // Send a Midi noteOn
+    myBus.sendNoteOn(GAME_CH, abletonEventNoteNumber, 127);
     delay(100);
-    myBus.sendNoteOff(GAME_CH, abletonEventNoteNumber, 127); // Send a Midi nodeOff
+    myBus.sendNoteOff(GAME_CH, abletonEventNoteNumber, 127);
     abletonEventNoteNumber++;
   }
   // TODO: Illustrate on the screen what to do based on the currentNotes list of gameEvents
