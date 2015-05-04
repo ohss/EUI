@@ -155,12 +155,12 @@ void loop() {
 
 
   /* Estimate angles using gyro only */
-  gyroXangle += gyroXrate * dt; // Calculate gyro angle without any filter
-  gyroYangle += gyroYrate * dt;
-  gyroZangle += gyroZrate * dt;
-  //gyroXangle += kalmanX.getRate() * dt; // Calculate gyro angle using the unbiased rate from the Kalman filter
-  //gyroYangle += kalmanY.getRate() * dt;
-  //gyroZangle += kalmanZ.getRate() * dt;
+  //gyroXangle += gyroXrate * dt; // Calculate gyro angle without any filter
+  //gyroYangle += gyroYrate * dt;
+  //gyroZangle += gyroZrate * dt;
+  gyroXangle += kalmanX.getRate() * dt; // Calculate gyro angle using the unbiased rate from the Kalman filter
+  gyroYangle += kalmanY.getRate() * dt;
+  gyroZangle += kalmanZ.getRate() * dt;
 
   /* Estimate angles using complimentary filter */
   compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
@@ -178,23 +178,23 @@ void loop() {
 
   /* Print Data */
 #if 1
-  //Serial.print(roll); Serial.print("\t");
-  //Serial.print(gyroXangle); Serial.print("\t");
-  //Serial.print(compAngleX); Serial.print("\t");
+  Serial.print(roll); Serial.print("\t");
+  Serial.print(gyroXangle); Serial.print("\t");
+  Serial.print(compAngleX); Serial.print("\t");
   Serial.print(kalAngleX); Serial.print("\t");
 
-  //Serial.print("\t");
+  Serial.print("\t");
 
-  //Serial.print(pitch); Serial.print("\t");
-  //Serial.print(gyroYangle); Serial.print("\t");
-  //Serial.print(compAngleY); Serial.print("\t");
+  Serial.print(pitch); Serial.print("\t");
+  Serial.print(gyroYangle); Serial.print("\t");
+  Serial.print(compAngleY); Serial.print("\t");
   Serial.print(kalAngleY); Serial.print("\t");
 
-  //Serial.print("\t");
+  Serial.print("\t");
 
-  //Serial.print(yaw); Serial.print("\t");
-  //Serial.print(gyroZangle); Serial.print("\t");
-  //Serial.print(compAngleZ); Serial.print("\t");
+  Serial.print(yaw); Serial.print("\t");
+  Serial.print(gyroZangle); Serial.print("\t");
+  Serial.print(compAngleZ); Serial.print("\t");
   Serial.print(kalAngleZ); Serial.print("\t");
 #endif
 #if 0 // Set to 1 to print the IMU data

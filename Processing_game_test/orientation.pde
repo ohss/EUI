@@ -1,22 +1,4 @@
-import processing.core.*; 
-import processing.data.*; 
-import processing.event.*; 
-import processing.opengl.*; 
-
-import processing.serial.*; 
-
-import java.util.HashMap; 
-import java.util.ArrayList; 
-import java.io.File; 
-import java.io.BufferedReader; 
-import java.io.PrintWriter; 
-import java.io.InputStream; 
-import java.io.OutputStream; 
-import java.io.IOException; 
-
-public class Plane extends PApplet {
-
-
+import processing.serial.*;
 Serial serial;
 
 String rollRaw, pitchRaw, yawRaw;
@@ -37,7 +19,7 @@ float x0 = width/2, y0 = height/2, z0 = 0;
 
 final float radius = 250;
 
-public void setup() {
+void setup() {
   size(width, height, P3D);
 
   for (int i = 0; i < Serial.list().length; i++)
@@ -54,7 +36,7 @@ public void setup() {
   drawPlane(); // Draw plane at startup
 }
 
-public void draw() {
+void draw() {
   if (drawValues) { // Draw plane
     drawValues = false;
     
@@ -62,7 +44,7 @@ public void draw() {
   drawPlane();
 }
 
-public void drawPlane() {
+void drawPlane() {
   background(255);
   lights();
 
@@ -119,7 +101,7 @@ public void drawPlane() {
 
 }
 
-public void serialEvent (Serial serial) {
+void serialEvent (Serial serial) {
   String[] input = trim(split(serial.readString(), '\t'));
   if (input.length != 15) {
     println("Wrong length: " + input.length);
@@ -156,9 +138,9 @@ public void serialEvent (Serial serial) {
   compZ = input[12];
   kalmanZ = input[13];
 
-  roll = PApplet.parseFloat(kalmanX); // Show the Kalman values
-  pitch = PApplet.parseFloat(kalmanY);
-  yaw = PApplet.parseFloat(kalmanZ);
+  roll = float(kalmanX); // Show the Kalman values
+  pitch = float(kalmanY);
+  yaw = float(kalmanZ);
 
   if (firstValue) {
     rollStart = roll;
@@ -187,12 +169,12 @@ public void serialEvent (Serial serial) {
   //printValues(); // Used for debugging
 }
 
-public void keyPressed() {
+void keyPressed() {
   if (key == 'r')
     firstValue = true;
 }
 
-public void printValues() {
+void printValues() {
   //print(rollRaw);
   //print(',');
   //print(gyroX);
@@ -223,12 +205,4 @@ public void printValues() {
 
   //println();
 }
-  static public void main(String[] passedArgs) {
-    String[] appletArgs = new String[] { "Plane" };
-    if (passedArgs != null) {
-      PApplet.main(concat(appletArgs, passedArgs));
-    } else {
-      PApplet.main(appletArgs);
-    }
-  }
-}
+

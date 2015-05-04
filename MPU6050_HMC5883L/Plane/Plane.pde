@@ -26,7 +26,7 @@ void setup() {
     println("[" + i + "]: " +  Serial.list()[i]); // Use this to print all serial devices
 
   try {
-    serial = new Serial(this, Serial.list()[0], 9600); // Set this to your serial port obtained using the line above
+    serial = new Serial(this, Serial.list()[32], 9600); // Set this to your serial port obtained using the line above
     serial.bufferUntil('\n'); // Buffer until line feed
   } catch(Exception e) {
     println("Please select a valid COM-port!");
@@ -103,7 +103,7 @@ void drawPlane() {
 
 void serialEvent (Serial serial) {
   String[] input = trim(split(serial.readString(), '\t'));
-  if (input.length != 4) {
+  if (input.length != 15) {
     println("Wrong length: " + input.length);
     return;
   }
@@ -119,24 +119,24 @@ void serialEvent (Serial serial) {
   println();
 
   // Get the ASCII strings:
-  //rollRaw = input[0];
-  //gyroX = input[1];
-  //compX = input[2];
-  kalmanX = input[0];
+  rollRaw = input[0];
+  gyroX = input[1];
+  compX = input[2];
+  kalmanX = input[3];
 
   // Ignore extra tab
 
-  //pitchRaw = input[5];
-  //gyroY = input[6];
-  //compY = input[7];
-  kalmanY = input[1];
+  pitchRaw = input[5];
+  gyroY = input[6];
+  compY = input[7];
+  kalmanY = input[8];
 
   // Ignore extra tab
 
-  //yawRaw = input[10];
-  //gyroZ = input[11];
-  //compZ = input[12];
-  kalmanZ = input[2];
+  yawRaw = input[10];
+  gyroZ = input[11];
+  compZ = input[12];
+  kalmanZ = input[13];
 
   roll = float(kalmanX); // Show the Kalman values
   pitch = float(kalmanY);
