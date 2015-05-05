@@ -2,12 +2,12 @@ import processing.serial.*;
 Serial orientationSerial;
 Serial controlSerial;
 
-public static final int NOTE_ON_THRESHOLD = 22;
-public static final float NOTE_ON_RELATIVE_THRESHOLD = 0.98;
-public static final int NOTE_OFF_THRESHOLD = -25;
+public static final int NOTE_ON_THRESHOLD = 500;
+public static final int NOTE_OFF_THRESHOLD = -150;
 public static final float NOTE_OFF_RELATIVE_THRESHOLD = 0.98;
-public static final int AFTER_TOUCH_CNT = 0;
-public static final int AFTER_TOUCH_ITER_COUNT = 12;
+public static final int AFTER_TOUCH_ITER_COUNT = 60;
+public static final float AFTER_TOUCH_SCALE = 127.0/2500.0;
+
 
 String rollRaw, pitchRaw, yawRaw;
 String gyroX, gyroY, gyroZ;
@@ -16,6 +16,7 @@ String kalmanX, kalmanY, kalmanZ;
 float roll, pitch, yaw;
 float rollStart, pitchStart, yawStart;
 boolean firstValue = false;
+int serialCounter = 0;
 
 public MidiBus ctrlBus;
 
@@ -42,58 +43,6 @@ class calItem {
   }
 }
 
-class ringBufferItem{
-  int index;
-  int[] data;
-  int threshold;
-  int afterTouchCounter;
-  boolean triggered;
-  
-  ringBufferItem(){
-    this.index = 0;
-    this.threshold = 0;
-    this.afterTouchCounter = 0;
-    this.triggered = false;
-    this.data = new int[8];
-    for(int i = 0; i < data.length; i++){
-      data[i] = 0;
-    }
-  }
-  void add(int val){
-    this.index = (this.index + 1) % 8;
-    data[this.index] = val;
-  }
-  void trigger(){
-    this.triggered = true;
-    this.threshold = getRawCurrent();
-  }
-  void updateThreshold(){
-    this.threshold = (this.threshold + getRawCurrent())/2;
-  }
-  
-  int getMedian(){
-    int[] sorted = sort(data);
-    return(sorted[3]);
-  }
-  
-  int getRawCurrent(){
-    return this.data[this.index];
-  }
-
-  int getCurrent(){
-    int value = 0;
-    int median = getMedian();
-    for(int i = 0; i < 4; i++){
-      if((this.index - i) >= 0){
-        value += data[(this.index - i) % 8];
-      }else{
-        value += data[(8 - this.index - i ) % 8];
-      }
-    }
-    return(value/4);
-  }
-}
-
 void controller_setup() {
   
   //                     Parent  In        Out
@@ -113,8 +62,8 @@ void controller_setup() {
   println("\nAvailable serial ports:");
   for (int i = 0; i < Serial.list().length; i++)
     println("[" + i + "]: " +  Serial.list()[i]); // Use this to print all serial devices
-  // Initialize the Controller board
   
+  // Initialize the Controller board
   try {
     controlSerial = new Serial(this, Serial.list()[2], 9600); // Set this to your serial port obtained using the line above
     controlSerial.bufferUntil('\n'); // Buffer until line feed
@@ -142,8 +91,7 @@ void serialEvent (Serial s) {
   }
 }
 
-void handleNotes(){
-  /*
+void printAllSensors(){
   print("Note values: [");
   for(int i = 0; i < notes.length; i++){
     print(notes[i].getRawCurrent() + ", ");
@@ -153,10 +101,64 @@ void handleNotes(){
     print(bend[i].getRawCurrent() + ", ");
   }
   print("]\n");
+}
+
+void printSensorVelocity(){
+  print("Note Vel [");
+  for(int i = 0; i < notes.length; i++){
+    print(notes[i].getCurrent() + ", ");
+  }
+  print("] Bending vel [");
+    for(int i = 0; i < bend.length; i++){
+    print(bend[i].getCurrent() + ", ");
+  }
+  print("]\n");
+}
+
+void handleNotes(){
+  //printAllSensors();
+  //printSensorVelocity();
   
   for(int i = 0; i < notes.length; i++){
-    int value =  0;
-  }*/
+    int value =  notes[i].getCurrent();
+    int raw = notes[i].getRawCurrent();
+    int median = notes[i].getMedian();
+    int note_value = scale[i] + octave*12;
+    
+    // Note ON from velocity
+    if(value >= NOTE_ON_THRESHOLD && !notes[i].triggered){
+      println("NOTE ON " + i + " with vel: " + value);
+      notes[i].trigger();
+      ctrlBus.sendNoteOn(CTRL_CH, note_value, 127);
+      
+    // Note OFF from velocity or magnitude
+    }else if(( (value < NOTE_OFF_THRESHOLD) || (raw <= (notes[i].threshold * NOTE_OFF_RELATIVE_THRESHOLD)) ) && notes[i].triggered){ 
+      println("NOTE OFF " + i + " with vel: " + value + " with magnitude: " + raw + " Threshold: " + notes[i].threshold);
+      notes[i].unTrigger();
+      ctrlBus.sendNoteOff(CTRL_CH, note_value, 127);
+
+      // If no notes are played set aftertouch to 0
+      Boolean lastNote = true;
+      for(int j = 0; j < notes.length; j++){
+        if(notes[j].triggered){
+          lastNote = false;
+          break;
+        }   
+      }
+      if(lastNote) 
+        ctrlBus.sendMessage(AFTERTOUCH, 0);
+        
+    //Aftertouch
+    }else if(notes[i].triggered){
+      if(notes[i].aftertouch()){
+        int afterValue = int((raw - notes[i].threshold)*AFTER_TOUCH_SCALE);
+        afterValue = max(afterValue, 0);
+        afterValue = min(afterValue, 127);
+        //println("Trsh: " + notes[i].threshold + " Cur: " + raw + " Aftertouch: " + afterValue);
+        ctrlBus.sendMessage(AFTERTOUCH, afterValue);
+      }
+    } 
+  }
 }
 
 void controlSerialEvent (Serial serial) {
@@ -165,34 +167,35 @@ void controlSerialEvent (Serial serial) {
     println("Wrong length: " + input.length);
     return;
   }
-  //println("Received data from control serial length: " + input.length);
   
   for(int i = 0; i < input.length - 1; i++){
+    int index = 0;
+    switch(i){  // Map the analog inputs correctly to notes and bend sensors
+      case 0: index = 5; break;
+      case 1: index = 6; break;
+      case 2: index = 11; break;
+      case 3: index = 7; break;
+      case 4: index = 0; break;
+      case 5: index = 1; break;
+      case 6: index = 9; break;
+      case 7: index = 3; break;
+      case 8: index = 8; break;
+      case 9: index = 2; break;
+      case 10: index = 4; break;
+      case 11: index = 10; break;
+    }
     //print(i + ": " + input[i] + ", ");
-    if(i < 8)
-      notes[i].add(Integer.parseInt(input[i]));
+    if(index < 8)
+      notes[index].add(Integer.parseInt(input[i]));
     else
-      bend[i%4].add(Integer.parseInt(input[i]));
+      bend[index%4].add(Integer.parseInt(input[i]));
   }
-  /*
-                       switch(i){
-                        case 0: index = 5 break
-                        case 1: index = 6 break
-                        case 2: index = 11 break
-                        case 3: index = 7 break
-                        case 4: index = 1 break
-                        case 5: index = 0 break
-                        case 6: index = 9 break
-                        case 7: index = 3 break
-                        case 8: index = 8 break
-                        case 9: index = 5 break
-                        case 10: index = 4 break
-                        case 11: index = 10 break
-                    }
-  */
+  //Skip first 500 inputs
+  if(serialCounter > 512)
+    handleNotes();
+  else
+    serialCounter++;
   
-  
-  handleNotes();
   serial.clear(); // Clear buffer
 }
 

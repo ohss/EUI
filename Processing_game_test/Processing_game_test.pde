@@ -75,7 +75,6 @@ void drawGraphics(Boolean wasCorrect){
 
 Targets getPlayerState(){
   int[] notes = new int[playerNotes.size()];
-  println("PlayerNotes size " + playerNotes.size());
   for(int i = 0; i < notes.length; i++){
     notes[i] = playerNotes.get(i).intValue(); 
   }
@@ -88,14 +87,12 @@ void updatePlayerState(gameEvent e, Boolean isNoteOn){
     int relativePitch = e.note.relativePitch() % 12;
     int noteIndex = java.util.Arrays.binarySearch(scale, relativePitch);
     if(isNoteOn){ //Adding note to the list
-       println("Adding note to playerState " + e.note.pitch() % 12);
+       //println("Adding note to playerState " + e.note.pitch() % 12);
        if(noteIndex >= 0){
-         println("Note + " + relativePitch + " hasIndex " + noteIndex);
          playerNotes.add(new Integer(noteIndex));
        }
     }else{
-      Boolean wasSuccess = playerNotes.remove(new Integer(noteIndex));
-      println("Removing note from playerState " + e.note.pitch() % 12 + wasSuccess);
+      playerNotes.remove(new Integer(noteIndex));
     }
   }else if(e.cc != null){  //Update CC portion of player state
     switch(e.cc.type){
@@ -132,19 +129,19 @@ void midiMessage(MidiMessage message) {
       val = (data[2] << 7) | data[1] - 8192; // We need to combine the two bytes to form pitchbend value
       isGameLogic = true;
       type = PITCHBEND;
-      println("GAME: Pitchbend " + val);
+      //println("GAME: Pitchbend " + val);
       break;
     case AFTERTOUCH:
       val = data[1];
       isGameLogic = true;
       type = AFTERTOUCH;
-      println("GAME: Aftertouch " + val);
+      //println("GAME: Aftertouch " + val);
       break;
     case CC:
       num = data[1]; val = data[2];
       isGameLogic = true;
       type = CC;
-      println("GAME: ControlChange " + num + " val: " + val);
+      //println("GAME: ControlChange " + num + " val: " + val);
       break;
   }
 
@@ -175,7 +172,7 @@ void midiMessage(MidiMessage message) {
   if(isGameLogic){
     // Adding the message to the currentNotes list
     currentNotes.add(newEvent);
-    println("GAME: Adding new CC New list:\n" + currentNotes.toString());
+    //println("GAME: Adding new CC New list:\n" + currentNotes.toString());
   }else{
     //Adding to player state
     updatePlayerState(newEvent, false);
@@ -183,7 +180,7 @@ void midiMessage(MidiMessage message) {
     // Checking if the received message fullfills a condition on the list 
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
-      println("CTRL: Found a CC on the list");
+      //println("CTRL: Found a CC on the list");
       listElement.match();
     }
   }
@@ -209,13 +206,13 @@ void noteOn(int channel, int pitch, int velocity) {
     updatePlayerState(newEvent, true);
    
     //Check if the played notes are what we are looking for
-    print("CTRL: Checking for correct note: ");
+    //print("CTRL: Checking for correct note: ");
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
-      print("YES\n");
+      //print("YES\n");
       listElement.match();
     }else{
-      print("NO\n");
+      //print("NO\n");
     }
   }
 }
