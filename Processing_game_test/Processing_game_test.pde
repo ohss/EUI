@@ -9,10 +9,16 @@ public static final int PITCHBEND = 224;
 public static final int CTRL_CH = 0;
 public static final int GAME_CH = 1;
 
-public MidiBus myBus;   // The MidiBus
-eventList currentNotes; // List of notes and CC events that need to be completed
+public MidiBus myBus;                   // The MidiBus
+public Targets playerState;             // The current state of the player
+public ArrayList<Integer> playerNotes;  // The current notes held by the player 
+
+public eventList currentNotes; // List of notes and CC events that need to be completed
 int score;              // Current Score
 int abletonEventNoteNumber;  // The number of the note for the next Ableton Live loop
+
+int[] scale = {0, 2, 4, 5, 7, 9, 10, 11};
+int octave = 5;
 
 void setup() {
   size(400, 400);
@@ -24,25 +30,84 @@ void setup() {
   //                   |     |          |
   myBus = new MidiBus(this, "IAC Bus 1", "IAC Bus 2"); // Create a new MidiBus with no input device and the default Java Sound Synthesizer as the output device.
   currentNotes = new eventList();
+  playerNotes = new ArrayList<Integer>();
+  playerState = new Targets(new int[]{}, 0, new int[]{0,0}, 0);
   score = 0;
   abletonEventNoteNumber = 2; // Magic number
+  
+  // Setup orientation board
+  controller_setup();
 }
 
 void draw() {
-
   if(currentNotes.hasBeenCompletelyFullfilled() && currentNotes.size() > 0){
     score++;
     println("New score + " + score);
-    currentNotes.clear();
 
     //Send MIDI to go to next event in Ableton
     myBus.sendNoteOn(GAME_CH, abletonEventNoteNumber, 127);
     delay(100);
     myBus.sendNoteOff(GAME_CH, abletonEventNoteNumber, 127);
     abletonEventNoteNumber++;
+    drawGraphics(true);
+    currentNotes.clear();
+  }else{
+    drawGraphics(false);
   }
-  // TODO: Illustrate on the screen what to do based on the currentNotes list of gameEvents
+}
 
+/**
+ *
+ */
+
+void drawGraphics(Boolean wasCorrect){
+ 
+    Targets targets = currentNotes.getTargets();
+    int[] notes = targets.notes; // Array of ints with range of [0-7]
+    int aftertouch = targets.aftertouch; // Pressure with range of 0-127
+    int[] orientation = targets.orientation; // roll and pitch with range of 0-127, mapped from 0-90 degrees
+    int bend = targets.bend; // Bending range from -8192 - 8191
+    //println("Targets: " + targets);
+    
+    Targets playerState = getPlayerState();
+    //println("Player: " + playerState);
+}
+
+Targets getPlayerState(){
+  int[] notes = new int[playerNotes.size()];
+  println("PlayerNotes size " + playerNotes.size());
+  for(int i = 0; i < notes.length; i++){
+    notes[i] = playerNotes.get(i).intValue(); 
+  }
+  return new Targets(notes, playerState.aftertouch, playerState.orientation, playerState.bend);
+}
+
+void updatePlayerState(gameEvent e, Boolean isNoteOn){
+
+  if(e.note != null){ // Update notes
+    int relativePitch = e.note.relativePitch() % 12;
+    int noteIndex = java.util.Arrays.binarySearch(scale, relativePitch);
+    if(isNoteOn){ //Adding note to the list
+       println("Adding note to playerState " + e.note.pitch() % 12);
+       if(noteIndex >= 0){
+         println("Note + " + relativePitch + " hasIndex " + noteIndex);
+         playerNotes.add(new Integer(noteIndex));
+       }
+    }else{
+      Boolean wasSuccess = playerNotes.remove(new Integer(noteIndex));
+      println("Removing note from playerState " + e.note.pitch() % 12 + wasSuccess);
+    }
+  }else if(e.cc != null){  //Update CC portion of player state
+    switch(e.cc.type){
+      case PITCHBEND: playerState.bend = e.cc.value; break;
+      case AFTERTOUCH: playerState.aftertouch = e.cc.value; break;
+      case CC:
+        if(e.cc.number == 0)
+          playerState.orientation[0] = e.cc.value;
+        if(e.cc.number == 1)
+          playerState.orientation[1] = e.cc.value;
+    }
+  }
 }
 
 void midiMessage(MidiMessage message) {
@@ -89,19 +154,19 @@ void midiMessage(MidiMessage message) {
       val = (data[2] << 7) | data[1] - 8192;
       isGameLogic = false;
       type = PITCHBEND;
-      println("CTRL: Pitchbend " + val);
+      //println("CTRL: Pitchbend " + val);
       break;
     case AFTERTOUCH:
       val = data[1];
       type = AFTERTOUCH;
       isGameLogic = false;
-      println("CTRL: Aftertouch " + val);
+      //println("CTRL: Aftertouch " + val);
       break;
     case CC:
       num = data[1]; val = data[2];
       type = CC;
       isGameLogic = false;
-      println("CTRL: ControlChange " + num + " val: " + val);
+      //println("CTRL: ControlChange " + num + " val: " + val);
       break;
   }
   //Create a gameEvent from the incomming message
@@ -112,6 +177,9 @@ void midiMessage(MidiMessage message) {
     currentNotes.add(newEvent);
     println("GAME: Adding new CC New list:\n" + currentNotes.toString());
   }else{
+    //Adding to player state
+    updatePlayerState(newEvent, false);
+    
     // Checking if the received message fullfills a condition on the list 
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
@@ -137,6 +205,9 @@ void noteOn(int channel, int pitch, int velocity) {
     currentNotes.add(newEvent);
     println("GAME: Received a new note."); // Game list:\n" + currentNotes.toString());
   }else if(channel == CTRL_CH){
+    //Add to playerState
+    updatePlayerState(newEvent, true);
+   
     //Check if the played notes are what we are looking for
     print("CTRL: Checking for correct note: ");
     gameEvent listElement = currentNotes.contains(newEvent);
@@ -157,8 +228,11 @@ void noteOff(int channel, int pitch, int velocity) {
   // println("Channel:"+channel);
   // println("Pitch:"+pitch);
   // println("Velocity:"+velocity);
-  // Create a new gameEvent from the received note
   
+  //Remove from the playerState
+  if(channel == CTRL_CH){
+    updatePlayerState(new gameEvent(new Note(1, pitch, velocity),null), false);
+  }
   /*
   if(channel == GAME_CH){
     currentNotes.remove(new gameEvent(new Note(1, pitch, velocity), null));

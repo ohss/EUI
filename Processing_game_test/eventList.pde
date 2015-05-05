@@ -4,6 +4,38 @@ class eventList {
     list = new ArrayList<gameEvent>();
   }
 
+  public Targets getTargets(){
+    ArrayList<Integer> notes = new ArrayList<Integer>();
+    int aftertouch = 0;
+    int bend = 0;
+    int[] orientation = {0,0};
+    for(gameEvent n : list){
+      if(n.note != null){
+        int relativePitch = n.note.relativePitch() % 12;
+        int noteIndex = java.util.Arrays.binarySearch(scale, relativePitch);
+        if(noteIndex >= 0){
+          //println("Note + " + relativePitch + " hasIndex " + noteIndex);
+          notes.add(new Integer(noteIndex));
+        }
+      }else if(n.cc != null){
+        switch(n.cc.type){
+          case AFTERTOUCH: aftertouch = n.cc.value; break;
+          case PITCHBEND: bend = n.cc.value; break;
+          case CC:
+            if(n.cc.number == 0)
+              orientation[0] = n.cc.value;
+            if(n.cc.number == 1)
+              orientation[1] = n.cc.value;
+        }
+      }
+    }
+    int[] rtnNotes = new int[notes.size()];
+    for(int i = 0; i < rtnNotes.length; i++){
+      rtnNotes[i] = notes.get(i).intValue();
+    }
+    return new Targets(rtnNotes, aftertouch, orientation, bend);
+  }
+
   public Boolean add(gameEvent e){
     if(e.note != null){
       list.add(e);
