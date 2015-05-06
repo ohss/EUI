@@ -3,9 +3,9 @@ Serial orientationSerial;
 Serial controlSerial;
 
 public static final int NOTE_ON_THRESHOLD = 500;
-public static final int NOTE_OFF_THRESHOLD = -150;
-public static final float NOTE_OFF_RELATIVE_THRESHOLD = 0.98;
-public static final int AFTER_TOUCH_ITER_COUNT = 60;
+public static final int NOTE_OFF_THRESHOLD = -130;
+public static final float NOTE_OFF_RELATIVE_THRESHOLD = 1.0;
+public static final int AFTER_TOUCH_ITER_COUNT = 66;
 public static final float AFTER_TOUCH_SCALE = 127.0/2500.0;
 public static final int BEND_UP_ON_THRESHOLD = -500;
 public static final int BEND_UP_OFF_THRESHOLD = 240;
@@ -275,7 +275,7 @@ void controlSerialEvent (Serial serial) {
   if(serialCounter > 200){
     handleNotes();
     //printBendingValues();
-    handleBend();
+    //handleBend();
   }else{
     serialCounter++;
   }
@@ -326,11 +326,11 @@ void orientationSerialEvent (Serial serial) {
 
   int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
   int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));
-  
+
   //println("roll: " + roll_midi + " pitch: " + pitch_midi);
 
   //Send the MIDI data
-  ctrlBus.sendControllerChange(CTRL_CH, 1, pitch_midi);
+  //ctrlBus.sendControllerChange(CTRL_CH, 1, pitch_midi);
   ctrlBus.sendControllerChange(CTRL_CH, 2, roll_midi);
 }
 
