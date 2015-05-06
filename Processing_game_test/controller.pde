@@ -17,7 +17,7 @@ public static final int BEND_RANGE = 6;
 
 public static final int PITCHBEND_ITER_COUNT = 6;
 
-public static final float SHAKE_THRESHOLD = 100.0;
+public static final float SHAKE_THRESHOLD = 25.0;
 
 
 String rollRaw, pitchRaw, yawRaw;
@@ -27,6 +27,8 @@ String kalmanX, kalmanY, kalmanZ;
 float roll, pitch, yaw;
 float old_roll, old_pitch, old_yaw;
 float rollStart, pitchStart, yawStart;
+
+float last_orientation_measurement = millis();
 
 boolean firstValue = false;
 int serialCounter = 0;
@@ -87,6 +89,7 @@ void controller_setup() {
   // Initialize the Controller board
   try {
     int ctrlBoardIndex = java.util.Arrays.asList(Serial.list()).indexOf("/dev/cu.usbmodem39011");
+    //int ctrlBoardIndex = java.util.Arrays.asList(Serial.list()).indexOf("/dev/ttyACM0");
     if(ctrlBoardIndex >= 0 ){
       println("Found control board at: " + Serial.list()[ctrlBoardIndex]);
       controlSerial = new Serial(this, Serial.list()[ctrlBoardIndex], 9600); // Set this to your serial port obtained using the line above
@@ -102,6 +105,7 @@ void controller_setup() {
   // Initialize the Orientation board
   try {
     int orientationBoardIndex = java.util.Arrays.asList(Serial.list()).indexOf("/dev/cu.usbserial-A90RR5T1");
+    //int orientationBoardIndex = java.util.Arrays.asList(Serial.list()).indexOf("/dev/ttyUSB0");
     if(orientationBoardIndex >= 0 ){
       println("Found orientation board at: " + Serial.list()[orientationBoardIndex]);
       orientationSerial = new Serial(this, Serial.list()[orientationBoardIndex], 9600); // Set this to your serial port obtained using the line above
@@ -339,10 +343,13 @@ void orientationSerialEvent (Serial serial) {
 
   serial.clear(); // Clear buffer
 
-  println("Shake speed: " + Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch));
-  if (Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) > SHAKE_THRESHOLD) {
-    println("It's shaking");
+  float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
+  println("Shake speed: " + speed);
+  if (speed > SHAKE_THRESHOLD) {
+    println("---------------It's shaking---------------");
   }
+
+  last_orientation_measurement = millis();
 
   int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
   int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));

@@ -62,3 +62,6 @@ target/
 
 # jekyll _site folder
 _site/
+
+# processing
+Processing_game_test/build-tmp/
