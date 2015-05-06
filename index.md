@@ -6,15 +6,6 @@ layout: default
 
 ![Almost finished prototype](img/proto.jpg)
 
-Description what this thing is Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-![img_paths.txt](img/img_paths.txt)
-
 ![leds_1.jpg](img/leds_1.jpg)
 
 ![leds_2.jpg](img/leds_2.jpg)
