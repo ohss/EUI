@@ -94,10 +94,11 @@ void drawGraphics(Boolean wasCorrect){
 }
 
 void turnOnLeds(int[] notes) {
-  byte[] leds = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  byte[] leds = {48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48};
   for (int note : notes) {
-    leds[note*2] = 1;
+    leds[(note*2)+1] = 49;
   }
+  println("serialoutput: " + new String(leds));
 
   controlSerial.write(leds);
 }

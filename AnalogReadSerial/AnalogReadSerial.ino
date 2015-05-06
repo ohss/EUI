@@ -12,10 +12,10 @@ void setup() {
   Serial.begin(9600);
   
   //set port to output
-  for(int  i = 0 ; i < 13; i++){
+  for(int  i = 0 ; i < 8; i++){
     pinMode(i, OUTPUT); 
   }
-  for(int i = 24; i< 28; i++){
+  for(int i = 24; i< 32; i++){
     pinMode(i, OUTPUT); 
   }
   
@@ -26,14 +26,15 @@ void loop() {
   while (Serial.available() >= 16) {
     //0100000000000000
     //check input from computer  
-    for(int  i = 0 ; i < 13; i++){
-      int result = Serial.read();
-      digitalWrite(i, ( result== 49 )?HIGH:LOW );
-    }
-    for(int i = 24; i< 28; i++){
+    for(int i = 24; i< 32; i++){
       int result = Serial.read();
       digitalWrite(i, (result == 49 )?HIGH:LOW );
     }
+    for(int  i = 0 ; i < 8; i++){
+      int result = Serial.read();
+      digitalWrite(i, ( result== 49 )?HIGH:LOW );
+    }
+
     // Read the buffer until it's empty
     while (Serial.available() > 0) {
       Serial.read();

@@ -321,7 +321,7 @@ void orientationSerialEvent (Serial serial) {
   roll -= rollStart;
   pitch -= pitchStart;
   yaw -= yawStart;
-
+  /*
   int averadge = 0;
   averadge += (int)input[3];
   averadge += (int)input[8];
@@ -335,7 +335,7 @@ void orientationSerialEvent (Serial serial) {
     Math.abs(array[2] / average > 1.2)) {
       println("------------Shaking!------------");
     }
-
+  */
   serial.clear(); // Clear buffer
 
   int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));

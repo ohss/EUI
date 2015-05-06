@@ -1,0 +1,9 @@
+EUI Midi protocol:
+Note ON message with velocity less or equal than 63 is Green LED on
+Note ON message with velocity more or equal than 64 is Red LED on
+Note OFF is both LED of
+
+By default the MIDI input that drives LED’s is IAC Bus 2. (Second midi interface) This needs to be added in OS X Audio&MIDI control panel.
+
+
+
