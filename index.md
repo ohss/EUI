@@ -45,6 +45,7 @@ proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 This is the second itereation of the first prototype.
 
 {% gallery lotkopotko %}
+	proto_old.jpg
 	lotkopotko_proto_1.jpg
 	lotkopotko_proto_2.jpg
 {% endgallery %}
@@ -69,3 +70,7 @@ This is the second itereation of the first prototype.
 ## Software
 
 How it works
+
+{% gallery software %}
+	system_architecture.jpg
+{% endgallery %}
