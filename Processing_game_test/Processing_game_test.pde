@@ -90,13 +90,13 @@ void drawGraphics(Boolean wasCorrect){
     Targets playerState = getPlayerState();
     //println("Player:  " + playerState);
 
-    turnOnLeds(notes)
+    turnOnLeds(notes);
 }
 
 void turnOnLeds(int[] notes) {
-  int[] leds = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  for (note : notes) {
-    leds[note*2] = 1
+  byte[] leds = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  for (int note : notes) {
+    leds[note*2] = 1;
   }
 
   controlSerial.write(leds);

@@ -323,17 +323,17 @@ void orientationSerialEvent (Serial serial) {
   yaw -= yawStart;
 
   int averadge = 0;
-  averadge += input[3];
-  averadge += input[8];
-  averadge += input[13];
+  averadge += (int)input[3];
+  averadge += (int)input[8];
+  averadge += (int)input[13];
   averadge = averadge / 3;
 
   if(input[3]>1.5 ||
     input[8]>1.5 ||
     input[13]>1.5 ||
-    Math.abs(array[2] / average < 0.8 ) || 
-    Math.abs(array[2] / average > 1.2) {
-      println("------------Shaking!------------");;
+    Math.abs(array[2] / average < 0.8 ) ||
+    Math.abs(array[2] / average > 1.2)) {
+      println("------------Shaking!------------");
     }
 
   serial.clear(); // Clear buffer
