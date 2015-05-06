@@ -5,5 +5,13 @@ Cheung Cheng Ian, Hennick Terah‎, Holman Tai, Niiranen Heikki, Sorvettula Otso
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://ohss.github.io/EUI/" # the base hostname & protocol for your site
 
+gallerytag:
+    source_dir: img
+    destination_dir: img
+    thumb_width: 150
+    thumb_height: 150
+    columns: 4
+    custom_attribute_name: data-fancybox-group
+
 # Build settings
 markdown: kramdown

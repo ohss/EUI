@@ -104,8 +104,6 @@ a {
   .project-tagline {
     font-size: 1rem; } }
 
-.main-content :first-child {
-  margin-top: 0; }
 .main-content img {
   max-width: 100%; 
   display: block;
@@ -246,3 +244,32 @@ a {
 @media screen and (max-width: 42em) {
   .site-footer {
     font-size: 0.9rem; } }
+
+/* Gallery styles*/
+
+.gallery-caption {
+  font-size: 0.8em;
+  font-style: italic;
+  color: #666666;
+  margin-left: 0px;
+}
+img.imgborder, #content .gallery .gallery-icon img {
+  border: 1px solid #ddd;
+  padding: 6px;
+}
+#content .gallery .gallery-icon a:focus img, #content .gallery .gallery-icon a:hover img, #content .gallery .gallery-icon a:active img, #content a:hover img.imgborder {
+  background: #eee;
+  border-color: #bbb;
+}
+
+.gallery-item {
+    float: left;
+    margin-top: 10px;
+    text-align: center;
+    width: 25%;
+}
+
+/* TOC */
+#markdown-toc {
+  list-style: none;
+}
