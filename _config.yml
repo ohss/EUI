@@ -1,0 +1,9 @@
+# Site settings
+title: ReFlexiTech MIDI controller for Stroke Rehabilitation
+description: "Aalto University, ME-E4200 Experimental User Interfaces, Spring 2015
+Cheung Cheng Ian, Hennick Terah‎, Holman Tai, Niiranen Heikki, Sorvettula Otso"
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "http://ohss.github.io/EUI/" # the base hostname & protocol for your site
+
+# Build settings
+markdown: kramdown
