@@ -8,6 +8,7 @@ public static final int AFTERTOUCH = 208;
 public static final int PITCHBEND = 224;
 public static final int CTRL_CH = 0;
 public static final int GAME_CH = 1;
+public static final int ABLETON_CH = 3;
 
 public MidiBus myBus;                   // The MidiBus
 public Targets playerState;             // The current state of the player
@@ -17,14 +18,15 @@ public eventList currentNotes; // List of notes and CC events that need to be co
 int score;              // Current Score
 int abletonEventNoteNumber;  // The number of the note for the next Ableton Live loop
 
-int[] scale = {0, 2, 4, 5, 7, 9, 10, 11};
+//int[] scale = {0, 2, 4, 5, 7, 9, 10, 11};
+int[] scale = {4, 6, 8, 9, 11, 13, 14, 18};
 int octave = 5;
 
 void setup() {
   size(400, 400);
   background(255);
   stroke(0);
-  MidiBus.list(); // List all available Midi devices on STDOUT. This will show each device's index and name.
+  //MidiBus.list(); // List all available Midi devices on STDOUT. This will show each device's index and name.
 
   //                 Parent  In        Out
   //                   |     |          |
@@ -33,27 +35,43 @@ void setup() {
   playerNotes = new ArrayList<Integer>();
   playerState = new Targets(new int[]{}, 0, new int[]{0,0}, 0);
   score = 0;
-  abletonEventNoteNumber = 2; // Magic number
-  
+  abletonEventNoteNumber = 0; // Magic number
   // Setup orientation board
   controller_setup();
+  
+  // Trigger first event
+  
+  myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
+  delay(100);
+  myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
+  
+  //abletonEventNoteNumber++;
 }
 
 void draw() {
   if(currentNotes.hasBeenCompletelyFullfilled() && currentNotes.size() > 0){
     score++;
-    println("New score + " + score);
-
     //Send MIDI to go to next event in Ableton
-    myBus.sendNoteOn(GAME_CH, abletonEventNoteNumber, 127);
-    delay(100);
-    myBus.sendNoteOff(GAME_CH, abletonEventNoteNumber, 127);
-    abletonEventNoteNumber++;
+    abletonEventNoteNumber = (abletonEventNoteNumber + 1)%23;
+    println("New score + " + score + " Next note: " + abletonEventNoteNumber);
+    myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
+    //delay(100);
+    myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
     drawGraphics(true);
     currentNotes.clear();
   }else{
     drawGraphics(false);
   }
+  // Send Ableton notes
+  /*
+  for(int i = 0; i < 32; i++){
+    print("Sending note:" + i);
+     myBus.sendNoteOn(3, i, 127);
+    delay(100) ;
+    myBus.sendNoteOff(3, i, 127);
+    delay(2000);
+  }
+  */
 }
 
 /**
@@ -70,7 +88,7 @@ void drawGraphics(Boolean wasCorrect){
     //println("Targets: " + targets);
     
     Targets playerState = getPlayerState();
-    //println("Player: " + playerState);
+    //println("Player:  " + playerState);
 }
 
 Targets getPlayerState(){
@@ -99,9 +117,9 @@ void updatePlayerState(gameEvent e, Boolean isNoteOn){
       case PITCHBEND: playerState.bend = e.cc.value; break;
       case AFTERTOUCH: playerState.aftertouch = e.cc.value; break;
       case CC:
-        if(e.cc.number == 0)
-          playerState.orientation[0] = e.cc.value;
         if(e.cc.number == 1)
+          playerState.orientation[0] = e.cc.value;
+        if(e.cc.number == 2)
           playerState.orientation[1] = e.cc.value;
     }
   }
@@ -200,13 +218,14 @@ void noteOn(int channel, int pitch, int velocity) {
 
   if(channel == GAME_CH){
     currentNotes.add(newEvent);
-    println("GAME: Received a new note."); // Game list:\n" + currentNotes.toString());
+    println("GAME: Received a new note: " + pitch); // Game list:\n" + currentNotes.toString());
   }else if(channel == CTRL_CH){
     //Add to playerState
     updatePlayerState(newEvent, true);
    
+    /* THIS WAS MOVED TO NOTE OFF
     //Check if the played notes are what we are looking for
-    //print("CTRL: Checking for correct note: ");
+    println("CTRL: Checking for correct note: " + pitch);
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
       //print("YES\n");
@@ -214,6 +233,7 @@ void noteOn(int channel, int pitch, int velocity) {
     }else{
       //print("NO\n");
     }
+    */
   }
 }
 
@@ -226,8 +246,20 @@ void noteOff(int channel, int pitch, int velocity) {
   // println("Pitch:"+pitch);
   // println("Velocity:"+velocity);
   
+  gameEvent newEvent = new gameEvent(new Note(1, pitch, velocity), null);
+  
   //Remove from the playerState
   if(channel == CTRL_CH){
+    //Check if the played notes are what we are looking for
+    println("CTRL: Checking for correct note: " + pitch);
+    gameEvent listElement = currentNotes.contains(newEvent);
+    if(listElement != null){
+      //print("YES\n");
+      listElement.match();
+    }else{
+      //print("NO\n");
+    }
+    
     updatePlayerState(new gameEvent(new Note(1, pitch, velocity),null), false);
   }
   /*

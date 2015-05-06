@@ -1,3 +1,5 @@
+public static final float FILTER_COEF = 10.0;
+
 class ringBufferItem{
   int index;
   int size;
@@ -7,7 +9,7 @@ class ringBufferItem{
   boolean triggered;
 
   ringBufferItem(int size){
-    this.index = 0;
+    this.index = -1;
     this.size = size;
     this.threshold = 0;
     this.aftertouchCounter = 0;
@@ -21,6 +23,16 @@ class ringBufferItem{
     this.index = (this.index + 1) % size;
     data[this.index] = val;
   }
+
+  void addFiltered(int val){
+    if(index >= 0){
+      int old = this.data[index];
+      this.index = (this.index + 1) % size;
+      data[this.index] = (int)Math.round((val+old*FILTER_COEF)/(FILTER_COEF+1));
+    }else
+      this.add(val);
+  }
+
   void trigger(){
     this.triggered = true;
     this.threshold = getRawCurrent();
@@ -61,7 +73,10 @@ class ringBufferItem{
   }
 
   int getRawCurrent(){
-    return this.data[this.index];
+    if(index >= 0)
+      return this.data[this.index];
+    else
+      return 0;
   }
 
   int getCurrent(){
@@ -70,8 +85,10 @@ class ringBufferItem{
     for(int i = 0; i < (size/2); i++){
       if((this.index - i) >= 0){
         value += data[(this.index - i) % size] - median;
-      }else{
+      }else if (this.index >= 0){
         value += data[(size - this.index - i ) % size] - median;
+      }else{
+        return(0);
       }
     }
     return(value/(size/2));

@@ -7,8 +7,14 @@ public static final int NOTE_OFF_THRESHOLD = -150;
 public static final float NOTE_OFF_RELATIVE_THRESHOLD = 0.98;
 public static final int AFTER_TOUCH_ITER_COUNT = 60;
 public static final float AFTER_TOUCH_SCALE = 127.0/2500.0;
-public static final int BEND_ON_THRESHOLD = 200;
-public static final int BEND_OFF_THRESHOLD = -150;
+public static final int BEND_UP_ON_THRESHOLD = -500;
+public static final int BEND_UP_OFF_THRESHOLD = 240;
+public static final float BEND_UP_SCALE = 2200.0;
+public static final int BEND_DOWN_ON_THRESHOLD = 400;
+public static final int BEND_DOWN_OFF_THRESHOLD = -240;
+public static final float BEND_DOWN_SCALE = 4300.0;
+public static final int BEND_RANGE = 6;
+
 public static final int PITCHBEND_ITER_COUNT = 6;
 
 
@@ -165,35 +171,67 @@ void handleBend(){
   int raw = bendBuffer.getRawCurrent();
   int acc = bendBuffer.getCurrent();
 
-  // Bend down ON
-  if((raw - median) >= BEND_ON_THRESHOLD && !bendBuffer.triggered){
+  // Bend up ON
+  if(acc <= BEND_UP_ON_THRESHOLD && !bendBuffer.triggered && !bendDown){
+    bendBuffer.trigger();
+    bendUp = true;
+    bendDown = false;
+    println("\nBEND UP ON\n");
+
+  // Bend up OFF
+  }else if(((acc > BEND_UP_OFF_THRESHOLD) || (bendBuffer.threshold < raw)) && bendBuffer.triggered && bendUp){
+    println("\nBEND UP OFF\n");
+    if(acc > BEND_UP_OFF_THRESHOLD)
+      println(" acc " + acc + " more than "+BEND_UP_OFF_THRESHOLD +"\n");
+    if(bendBuffer.threshold > raw)
+      println(" raw " + raw + " more than " +bendBuffer.threshold + "\n");
+
+    bendBuffer.unTrigger();
+    bendUp = false;
+    // Bend down ON
+  /*
+  }else if(acc >= BEND_DOWN_ON_THRESHOLD && !bendBuffer.triggered && !bendUp){
     bendBuffer.trigger();
     bendDown = true;
     bendUp = false;
     println("\nBEND DOWN ON\n");
+  // Bend down OFF
+  }else if(((acc < BEND_DOWN_OFF_THRESHOLD) || (bendBuffer.threshold > raw)) && bendBuffer.triggered && bendDown){
+    print("\nBEND DOWN OFF");
+    if(acc < BEND_UP_OFF_THRESHOLD)
+      println(" acc " + acc + " less than "+BEND_DOWN_OFF_THRESHOLD +"\n");
+    if(bendBuffer.threshold > raw)
+      println(" raw " + raw + " less than " +bendBuffer.threshold + "\n");
 
-  // Bend down OFF
-  }else if((bendBuffer.threshold/(1-0.7) < raw) && bendBuffer.triggered){
-    println("\nBEND DOWN OFF\n");
     bendBuffer.unTrigger();
     bendDown = false;
-  // Bend up ON
-  /*
-  }else if((raw - median) <= BEND_ON_THRESHOLD && !bendBuffer.triggered){
-    bendBuffer.trigger();
-    bendDown = false;
-    bendUp = true;
-    println("\nBEND UP ON\n");
-  // Bend down OFF
-  }else if(bendBuffer.threshold*0.7 > abs(raw) && bendBuffer.triggered){
-    println("\nBEND UP OFF\n");
-    bendBuffer.unTrigger();
-    bendUp = false;
-  // Bend values
   */
+  // Bend values
   }else if(bendBuffer.triggered){
     if(bendBuffer.pitchbend()){
-      print("Bend: " + (raw - bendBuffer.threshold) + " thrs: " + bendBuffer.threshold + " ");
+      int bend = 0;
+      int bend_normalized = 0;
+      int raw_bend = raw - bendBuffer.threshold;
+      if(bendUp){
+        print("UP ");
+        bend = (int)Math.round(BEND_RANGE*(min(BEND_UP_SCALE, Math.abs(raw_bend)) / BEND_UP_SCALE));
+        bend_normalized = 8192+(int)Math.round(8191*(bend/(double)BEND_RANGE));
+      }
+      if(bendDown){
+        print("DOWN ");
+        bend = (int)Math.round(-1*BEND_RANGE*(min(BEND_DOWN_SCALE, Math.abs(raw_bend)) / BEND_DOWN_SCALE));
+        bend_normalized = (int)Math.round(8192*(Math.abs(bend)/(double)BEND_RANGE));
+      }
+      print("Bend: " + bend + " raw bend " + raw_bend + " thrs: " + bendBuffer.threshold + " ");
+
+      int byte1 = bend_normalized & 0xF;
+      int byte2 = bend_normalized >> 8;
+      String s1 = String.format("%8s", Integer.toBinaryString(byte1 & 0xFF)).replace(' ', '0');
+      String s2 = String.format("%8s", Integer.toBinaryString(byte2 & 0xFF)).replace(' ', '0');
+      println("int val: " +bend_normalized+" byte1: " + s1 + " byte2: " +s2);
+
+      // Send the midi data
+      ctrlBus.sendMessage(PITCHBEND, byte1, byte2);
     }
 
   }
@@ -230,14 +268,14 @@ void controlSerialEvent (Serial serial) {
       bend[index%4].add(Integer.parseInt(input[i]));
   }
   int bendval = bend[0].getRawCurrent() - bend[1].getRawCurrent() + bend[2].getRawCurrent();
-  bendval = (bendval / 3);
-  bendBuffer.add(bendval);
+  bendval = (bendval / 2);
+  bendBuffer.addFiltered(bendval);
 
   //Skip first 500 inputs
   if(serialCounter > 200){
     handleNotes();
     //printBendingValues();
-    //handleBend();
+    handleBend();
   }else{
     serialCounter++;
   }
@@ -286,14 +324,14 @@ void orientationSerialEvent (Serial serial) {
 
   serial.clear(); // Clear buffer
 
-  int roll_midi = min(127,(int)(abs(roll)*(127.0/90.0)));
-  int pitch_midi = min(127, (int)(abs(pitch)*(127.0/90.0)));
-
+  int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
+  int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));
+  
   //println("roll: " + roll_midi + " pitch: " + pitch_midi);
 
   //Send the MIDI data
-  ctrlBus.sendControllerChange(CTRL_CH, 0, roll_midi);
   ctrlBus.sendControllerChange(CTRL_CH, 1, pitch_midi);
+  ctrlBus.sendControllerChange(CTRL_CH, 2, roll_midi);
 }
 
 void keyPressed() {

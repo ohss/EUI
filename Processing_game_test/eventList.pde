@@ -22,9 +22,9 @@ class eventList {
           case AFTERTOUCH: aftertouch = n.cc.value; break;
           case PITCHBEND: bend = n.cc.value; break;
           case CC:
-            if(n.cc.number == 0)
-              orientation[0] = n.cc.value;
             if(n.cc.number == 1)
+              orientation[0] = n.cc.value;
+            if(n.cc.number == 2)
               orientation[1] = n.cc.value;
         }
       }
@@ -98,7 +98,8 @@ class eventList {
 
   public Boolean hasBeenCompletelyFullfilled(){
     Boolean isComplete = true;
-    for(gameEvent e : list){
+    ArrayList<gameEvent> copyList = (ArrayList<gameEvent>)list.clone();
+    for(gameEvent e : copyList){
       if(!e.matched()){
         isComplete = false;
         break;
