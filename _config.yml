@@ -5,8 +5,8 @@ Cheung Cheng Ian, Hennick Terah‎, Holman Tai, Niiranen Heikki, Sorvettula Otso
 baseurl: "" # the subpath of your site, e.g. /blog/
 url: "http://ohss.github.io/EUI/" # the base hostname & protocol for your site
 
-include: .nojekyll
-
+include: [.nojekyll]
+exclude: [jekgit.sh, README.md]
 gallerytag:
     source_dir: img
     destination_dir: img
