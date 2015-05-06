@@ -59,7 +59,7 @@ module Jekyll
 			gallery_data = []
 			input_data.each do |item|
 				hsh = {
-					"url" => "/#{source_dir}/#{item[0]}",
+					"url" => "#{source_dir}/#{item[0]}",
 					"thumbnail" => GalleryThumbnail.new(item[0], @config), #this should be url to a generated thumbnail, eventually
 					"caption" => item[1]
 				}
@@ -100,7 +100,7 @@ module Jekyll
 	 	def get_url
 	 		filename = File.path(@img_filename).sub(File.extname(@img_filename), "-thumb#{File.extname(@img_filename)}")
 	 		directory = @config['destination_dir'] != nil ? @config['destination_dir'].sub(/^\//, '') : (@config['url'] != nil ? @config['url'].sub(/^\//, '') : "images/thumbs")
-			"/#{directory}/#{filename}"
+			"#{directory}/#{filename}"
 	 	end
 
 
