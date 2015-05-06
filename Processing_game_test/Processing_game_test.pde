@@ -12,7 +12,7 @@ public static final int ABLETON_CH = 3;
 
 public MidiBus myBus;                   // The MidiBus
 public Targets playerState;             // The current state of the player
-public ArrayList<Integer> playerNotes;  // The current notes held by the player 
+public ArrayList<Integer> playerNotes;  // The current notes held by the player
 
 public eventList currentNotes; // List of notes and CC events that need to be completed
 int score;              // Current Score
@@ -38,13 +38,13 @@ void setup() {
   abletonEventNoteNumber = 0; // Magic number
   // Setup orientation board
   controller_setup();
-  
+
   // Trigger first event
-  
+
   myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
   delay(100);
   myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
-  
+
   //abletonEventNoteNumber++;
 }
 
@@ -79,14 +79,14 @@ void draw() {
  */
 
 void drawGraphics(Boolean wasCorrect){
- 
+
     Targets targets = currentNotes.getTargets();
     int[] notes = targets.notes; // Array of ints with range of [0-7]
     int aftertouch = targets.aftertouch; // Pressure with range of 0-127
     int[] orientation = targets.orientation; // roll and pitch with range of 0-127, mapped from 0-90 degrees
     int bend = targets.bend; // Bending range from -8192 - 8191
     //println("Targets: " + targets);
-    
+
     Targets playerState = getPlayerState();
     //println("Player:  " + playerState);
 }
@@ -94,7 +94,7 @@ void drawGraphics(Boolean wasCorrect){
 Targets getPlayerState(){
   int[] notes = new int[playerNotes.size()];
   for(int i = 0; i < notes.length; i++){
-    notes[i] = playerNotes.get(i).intValue(); 
+    notes[i] = playerNotes.get(i).intValue();
   }
   return new Targets(notes, playerState.aftertouch, playerState.orientation, playerState.bend);
 }
@@ -194,8 +194,8 @@ void midiMessage(MidiMessage message) {
   }else{
     //Adding to player state
     updatePlayerState(newEvent, false);
-    
-    // Checking if the received message fullfills a condition on the list 
+
+    // Checking if the received message fullfills a condition on the list
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
       //println("CTRL: Found a CC on the list");
@@ -222,7 +222,7 @@ void noteOn(int channel, int pitch, int velocity) {
   }else if(channel == CTRL_CH){
     //Add to playerState
     updatePlayerState(newEvent, true);
-   
+
     /* THIS WAS MOVED TO NOTE OFF
     //Check if the played notes are what we are looking for
     println("CTRL: Checking for correct note: " + pitch);
@@ -245,13 +245,13 @@ void noteOff(int channel, int pitch, int velocity) {
   // println("Channel:"+channel);
   // println("Pitch:"+pitch);
   // println("Velocity:"+velocity);
-  
+
   gameEvent newEvent = new gameEvent(new Note(1, pitch, velocity), null);
-  
+
   //Remove from the playerState
   if(channel == CTRL_CH){
     //Check if the played notes are what we are looking for
-    println("CTRL: Checking for correct note: " + pitch);
+    //println("CTRL: Checking for correct note: " + pitch);
     gameEvent listElement = currentNotes.contains(newEvent);
     if(listElement != null){
       //print("YES\n");
@@ -259,7 +259,7 @@ void noteOff(int channel, int pitch, int velocity) {
     }else{
       //print("NO\n");
     }
-    
+
     updatePlayerState(new gameEvent(new Note(1, pitch, velocity),null), false);
   }
   /*
