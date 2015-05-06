@@ -59,3 +59,6 @@ target/
 
 # OSX
 .DS_Store
+
+# jekyll _site folder
+_site/

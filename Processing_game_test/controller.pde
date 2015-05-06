@@ -17,13 +17,17 @@ public static final int BEND_RANGE = 6;
 
 public static final int PITCHBEND_ITER_COUNT = 6;
 
+public static final float SHAKE_THRESHOLD = 100.0;
+
 
 String rollRaw, pitchRaw, yawRaw;
 String gyroX, gyroY, gyroZ;
 String compX, compY, compZ;
 String kalmanX, kalmanY, kalmanZ;
 float roll, pitch, yaw;
+float old_roll, old_pitch, old_yaw;
 float rollStart, pitchStart, yawStart;
+
 boolean firstValue = false;
 int serialCounter = 0;
 int high = Integer.MIN_VALUE;
@@ -307,6 +311,12 @@ void orientationSerialEvent (Serial serial) {
   compZ = input[12];
   kalmanZ = input[13];
 
+  if (!firstValue) {
+    old_roll = roll;
+    old_pitch = pitch;
+    old_yaw = yaw;
+  }
+
   roll = float(kalmanX); // Show the Kalman values
   pitch = float(kalmanY);
   yaw = float(kalmanZ);
@@ -315,6 +325,11 @@ void orientationSerialEvent (Serial serial) {
     rollStart = roll;
     pitchStart = pitch;
     yawStart = yaw;
+
+    old_roll = roll;
+    old_pitch = pitch;
+    old_yaw = yaw;
+
     firstValue  = false;
   }
 
@@ -322,21 +337,12 @@ void orientationSerialEvent (Serial serial) {
   pitch -= pitchStart;
   yaw -= yawStart;
 
-  int averadge = 0;
-  averadge += (int)input[3];
-  averadge += (int)input[8];
-  averadge += (int)input[13];
-  averadge = averadge / 3;
-
-  if(input[3]>1.5 ||
-    input[8]>1.5 ||
-    input[13]>1.5 ||
-    Math.abs(array[2] / average < 0.8 ) ||
-    Math.abs(array[2] / average > 1.2)) {
-      println("------------Shaking!------------");
-    }
-
   serial.clear(); // Clear buffer
+
+  println("Shake speed: " + Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch));
+  if (Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) > SHAKE_THRESHOLD) {
+    println("It's shaking");
+  }
 
   int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
   int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));
