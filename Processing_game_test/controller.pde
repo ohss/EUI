@@ -17,7 +17,11 @@ public static final int BEND_RANGE = 6;
 
 public static final int PITCHBEND_ITER_COUNT = 6;
 
+<<<<<<< HEAD
 public static final float SHAKE_THRESHOLD = 25.0;
+=======
+public static final float SHAKE_THRESHOLD = 15.0;
+>>>>>>> d5c31a5855cfc9ea060a5b8c9b87918acc44250d
 
 
 String rollRaw, pitchRaw, yawRaw;

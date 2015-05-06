@@ -28,11 +28,12 @@ SCALE = [0, 2, 4, 5, 7, 9, 10, 11]
 NOTE_ON = [False, False, False, False, False, False, False, False]
 LEDS = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 OCTAVE = 5
-NOTE_ON_THRESHOLD = 22
-NOTE_OFF_THRESHOLD = -25
-NOTE_OFF_RELATIVE_THRESHOLD = 0.98
+NOTE_ON_THRESHOLD = 300
+NOTE_OFF_THRESHOLD = -200
+NOTE_OFF_RELATIVE_THRESHOLD = 0.95
 AFTER_TOUCH_CNT = 0
-AFTER_TOUCH_ITER_COUNT = 12
+AFTER_TOUCH_ITER_COUNT = 24
+AFTER_TOUCH_SCALE = (127.0/2600.0)
 
 offset = 0
 count = 0
@@ -125,7 +126,8 @@ def handle_notes(sensor_values):
                 RING_BUF[idx]['treshold_val'] = (0.5*RING_BUF[idx]['treshold_val'] + 0.5*raw_value)
                 AFTER_TOUCH_CNT = AFTER_TOUCH_CNT + 1
             else:
-                after_value = max((raw_value - RING_BUF[idx]['treshold_val']),0)
+                after_value = (raw_value - RING_BUF[idx]['treshold_val'])*AFTER_TOUCH_SCALE
+                after_value = max(after_value,0)
                 after_value = min(after_value, 127)
                 print("Trsh: %i Cur: %i Aftertouch: %i"% (RING_BUF[idx]['treshold_val'],raw_value, after_value))
                 after_msg = Message("aftertouch", value=int(after_value))
@@ -209,15 +211,41 @@ def get_serial_data():
         try:
             sensors = control_board.readline().strip().split("\t")
             if len(sensors) == 12:
-                for i in range(0,8):
-                    note_sensors[i] = int(sensors[i])
-                    #Fill the ring buffer
-                    #RING_BUF[RING_BUF_IDX] = note_sensors[i]
-                    #RING_BUF_IDX = (RING_BUF_IDX + 1) % 8
-                    RING_BUF[i]['data'][RING_BUF[i]['idx']] = note_sensors[i]
-                    RING_BUF[i]['idx'] = (RING_BUF[i]['idx'] + 1) % 8
-                for i in range(0,4):
-                    bend_sensors[i] = int(sensors[i+8])
+                for i in range(0,12):
+                    index = 0;
+                    if( i == 0):
+                        index = 5
+                    if( i == 1):
+                        index = 6
+                    if( i == 2):
+                        index = 11
+                    if( i == 3):
+                        index = 7
+                    if( i == 4):
+                        index = 0
+                    if( i == 5):
+                        index = 1
+                    if( i == 6):
+                        index = 9
+                    if( i == 7):
+                        index = 3
+                    if( i == 8):
+                        index = 8
+                    if( i == 9):
+                        index = 2
+                    if( i == 10):
+                        index = 4
+                    if( i == 11):
+                        index = 10
+                    if(index < 8):
+                        note_sensors[index] = int(sensors[i])
+                        #Fill the ring buffer
+                        RING_BUF[index]['data'][RING_BUF[index]['idx']] = note_sensors[index]
+                        RING_BUF[index]['idx'] = (RING_BUF[index]['idx'] + 1) % 8
+                    elif(index >= 8):
+                        bend_sensors[index - 8] = int(sensors[i])
+                #for i in range(0,4):
+                #    bend_sensors[i] = int(sensors[i+8])
                 return True
             else:
                 print "Got something we didn't expect len: %i input %s" % (len(sensors), sensors)
@@ -241,17 +269,17 @@ while 1:
     if read:
 
         #Print acceleration
-        for x in range(0,8):
-            acc = 0
-            val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
-            median = statistics.median(RING_BUF[x]['data'])
-            for i in range(0,4):
-                acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
-            acc = int(acc / 4)
-            print("%i " % acc),
-            if(AVG_DEV < abs(acc)):
-                AVG_DEV = abs(acc)
-        print("")
+        # for x in range(0,8):
+        #     acc = 0
+        #     val = RING_BUF[x]['data'][RING_BUF[1]['idx']]
+        #     median = statistics.median(RING_BUF[x]['data'])
+        #     for i in range(0,4):
+        #         acc += RING_BUF[x]['data'][(RING_BUF[x]['idx'] - i)%8] - median
+        #     acc = int(acc / 4)
+        #     print("%i " % acc),
+        #     if(AVG_DEV < abs(acc)):
+        #         AVG_DEV = abs(acc)
+        # print("")
 
         #if(acc >= 0):
         #    print("Cur: %i Acc:  %i Max Acc: %f Median: %i  Buf: %s " % (val, acc, AVG_DEV, median, RING_BUF[0]['data']))

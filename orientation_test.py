@@ -21,7 +21,7 @@ midiports = mido.get_output_names()
 for port in midiports:
     print port
 
-out = mido.open_output(midiports[1])
+out = mido.open_output(midiports[0])
 
 rollStart = 0
 pitchStart = 0
@@ -84,9 +84,9 @@ while True:
     roll_fx = map_angle_to_control(roll)
     pitch_fx = map_angle_to_control(pitch)
 
-    roll_msg = mido.Message("control_change", control=2, value=roll_fx)
-    pitch_msg = mido.Message("control_change", control=1, value=pitch_fx)
-    out.send(roll_msg)
-    print roll_msg
+    roll_msg = mido.Message("control_change", control=1, value=roll_fx)
+    pitch_msg = mido.Message("control_change", control=2, value=pitch_fx)
+    #out.send(roll_msg)
+    #print roll_msg
     out.send(pitch_msg)
     print pitch_msg
