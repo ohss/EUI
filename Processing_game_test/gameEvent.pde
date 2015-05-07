@@ -47,9 +47,19 @@ class gameEvent {
   }
   public Boolean ccEquals(gameEvent e){
     if(this.cc != null && e.cc != null){
-      if(this.cc.type == e.cc.type && this.cc.number == e.cc.number && Math.abs(this.cc.value) <= Math.abs(e.cc.value)){
-        //hasBeenFullfilled = true;
-        return(true);
+      if(e.cc.type == CC && e.cc.number == 2){
+        if(this.cc.value > 63 && (this.cc.value <= e.cc.value)){
+          return(true);
+        }else if(this.cc.value < 63 && (this.cc.value >= e.cc.value)){
+          return(true);
+        }
+
+      }else{
+        // Everything except pan
+        if(this.cc.type == e.cc.type && this.cc.number == e.cc.number && Math.abs(this.cc.value) <= Math.abs(e.cc.value)){
+          //hasBeenFullfilled = true;
+          return(true);
+      }
       }
     }
     return(false);
@@ -69,12 +79,18 @@ class gameEvent {
   public Boolean update(gameEvent e){
     if(this.cc != null && e.cc != null){
       if(this.ccEquals(e)){
-        //println("Updating CC value");
+        println("Updating CC value orig: " + this.cc.value + " new: " + e.cc.value);
         this.cc.value = e.cc.value;
         return(true);
       }else if(this.cc.type == e.cc.type && this.cc.number == e.cc.number){
-        //println("Smaller not updating");
-        return(true);
+        if(this.cc.number == 2 && this.cc.value < 63 && e.cc.value < this.cc.value){
+          println("Special update CC value orig: " + this.cc.value + " new: " + e.cc.value);
+          this.cc.value = e.cc.value;
+          return(true);
+        }else{
+          println("Smaller not updating");
+          return(true);
+        }
       }else{
         return(false);
       }

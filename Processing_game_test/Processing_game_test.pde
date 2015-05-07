@@ -40,19 +40,18 @@ void setup() {
   // Setup orientation board
   controller_setup();
   setupUI();
-  // Trigger first event
 
+  // Trigger first event
   myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
   delay(100);
   myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
 
-  //abletonEventNoteNumber++;
 }
 
 void draw() {
   if(currentNotes.hasBeenCompletelyFullfilled() && currentNotes.size() > 0){
     score++;
-    //Send MIDI to go to next event in Ableton
+    //Set trigger to go to next event in Ableton
     abletonTrigger = true;
     drawGraphics(true);
     currentNotes.clear();
@@ -91,13 +90,16 @@ void drawGraphics(Boolean wasCorrect){
 }
 */
 void turnOnLeds(int[] notes) {
-  byte[] leds = {48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48};
+  byte[] leds = {49,48,49,48,49,48,49,48,49,48,49,48,49,48,49,48};
   for (int note : notes) {
+    leds[(note*2)+1] = 48;
     leds[(note*2)+1] = 49;
   }
   //println("serialoutput: " + new String(leds));
   if(controlSerial != null)
     controlSerial.write(leds);
+  else
+    println("Control board not open!");
 }
 
 Targets getPlayerState(){
@@ -266,7 +268,7 @@ void noteOff(int channel, int pitch, int velocity) {
   gameEvent newEvent = new gameEvent(new Note(1, pitch, velocity), null);
 
   if(channel == CTRL_CH){
-    // Send the note to Ableton
+    // Send the note to trigger the next event to Ableton
     if(abletonTrigger){
       abletonEventNoteNumber = (abletonEventNoteNumber + 1)%23;
       myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);

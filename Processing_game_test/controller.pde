@@ -5,8 +5,8 @@ Serial controlSerial;
 public static final int NOTE_ON_THRESHOLD = 500;
 public static final int NOTE_OFF_THRESHOLD = -130;
 public static final float NOTE_OFF_RELATIVE_THRESHOLD = 1.0;
-public static final int AFTER_TOUCH_ITER_COUNT = 46;
-public static final float AFTER_TOUCH_SCALE = 127.0/2500.0;
+public static final int AFTER_TOUCH_ITER_COUNT = 32;
+public static final float AFTER_TOUCH_SCALE = 127.0/2200.0;
 public static final int BEND_UP_ON_THRESHOLD = -500;
 public static final int BEND_UP_OFF_THRESHOLD = 240;
 public static final float BEND_UP_SCALE = 2200.0;
@@ -345,7 +345,7 @@ void orientationSerialEvent (Serial serial) {
     float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
     //println("Shake speed: " + speed);
     if (speed > SHAKE_THRESHOLD) {
-      println("---------------It's shaking---------------");  
+      println("---------------It's shaking---------------");
       for(int i = 0; i < scale.length; i++){
         int note_value = scale[i] + octave*12;
         ctrlBus.sendNoteOff(CTRL_CH, note_value, 127);

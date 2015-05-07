@@ -39,17 +39,17 @@ void drawGraphics(Boolean wasCorrect){
     Targets playerState = getPlayerState();
     //println("Player: " + playerState);
     */
-  //println((int)frameRate+"fps Targets: " + currentNotes.getTargets() + " " +wasCorrect);
+  println((int)frameRate+"fps Targets: " + currentNotes.getTargets() + " " +wasCorrect + " User: " + getPlayerState());
   //turnOnLeds(getPlayerState().notes);
 
   clear();
   //println("the ainmation state = " + animateState);
-  //if(wasCorrect) // print only when it is true
-  //  println("The wasCorrect = " +wasCorrect);
+  if(wasCorrect) // print only when it is true
+    println("The wasCorrect = " +wasCorrect);
 
   if(animateState.equals("idle") )
   {
-    background(102, 199, 242);
+    background(77, 120, 143);
     if(wasCorrect)
     {
       //println("Setting animateState to right");
@@ -71,7 +71,7 @@ void drawGraphics(Boolean wasCorrect){
   }
   else if(animateState.equals("right") )
   {
-    background(252, 225, 0);
+    background(157, 228, 245);
     Boolean isAnimateDone = PeopleImg.display();
 
     //the right animation is done, turn it back to normal state
@@ -88,7 +88,7 @@ void drawGraphics(Boolean wasCorrect){
   }
   else  //wrong animation
   {
-    background(252, 144, 0);
+    background(46, 89, 99);
     Boolean isAnimateDone = PeopleImg.display();
 
     //the wrong animation is done, turn it back to normal state
@@ -100,6 +100,14 @@ void drawGraphics(Boolean wasCorrect){
     else
     {
       //System.out.println("wrong animate not yet done!!!!!!!!!!!!!");
+    }
+    if(wasCorrect)
+    {
+      //println("Setting animateState to right");
+      //there was right
+      animateState = "right";
+      PeopleImg.changeState("right");
+      instructionHolder.changeState("right");
     }
   }
 
