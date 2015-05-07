@@ -345,7 +345,11 @@ void orientationSerialEvent (Serial serial) {
     float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
     //println("Shake speed: " + speed);
     if (speed > SHAKE_THRESHOLD) {
-      println("---------------It's shaking---------------");
+      println("---------------It's shaking---------------");  
+      for(int i = 0; i < scale.length; i++){
+        int note_value = scale[i] + octave*12;
+        ctrlBus.sendNoteOff(CTRL_CH, note_value, 127);
+      }
     }
 
     last_orientation_measurement = millis();
