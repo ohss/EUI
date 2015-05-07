@@ -2,7 +2,9 @@
 layout: default
 ---
 
-<iframe class="youtube" width="560" height="315" src="https://www.youtube.com/embed/i49_ekqx9xg?rel=0" frameborder="0" allowfullscreen></iframe>
+<div class="video-container">
+    <iframe src="https://www.youtube.com/embed/i49_ekqx9xg" frameborder="0" width="560" height="315"></iframe>
+</div>
 
 ## Contents
 {:.no_toc}
