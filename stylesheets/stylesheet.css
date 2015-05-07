@@ -273,3 +273,5 @@ img.imgborder, #content .gallery .gallery-icon img {
 #markdown-toc {
   list-style: none;
 }
+
+.youtube { display: block; margin: 0 auto; }

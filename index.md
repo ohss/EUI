@@ -1,6 +1,9 @@
 ---
 layout: default
 ---
+
+<iframe class="youtube" width="560" height="315" src="https://www.youtube.com/embed/i49_ekqx9xg?rel=0" frameborder="0" allowfullscreen></iframe>
+
 ## Contents
 {:.no_toc}
 
@@ -8,8 +11,6 @@ layout: default
 {:toc}
 
 ## ReFlexiTech MIDI controller
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/i49_ekqx9xg?rel=0" frameborder="0" allowfullscreen></iframe>
 
 ReFlexiTech is an exercising environment for stoke rehabilitation. It consist of:
 
