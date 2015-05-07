@@ -17,15 +17,16 @@ public ArrayList<Integer> playerNotes;  // The current notes held by the player
 public eventList currentNotes; // List of notes and CC events that need to be completed
 int score;              // Current Score
 int abletonEventNoteNumber;  // The number of the note for the next Ableton Live loop
+boolean abletonTrigger = false;
 
 //int[] scale = {0, 2, 4, 5, 7, 9, 10, 11};
 int[] scale = {4, 6, 8, 9, 11, 13, 14, 18};
 int octave = 5;
 
 void setup() {
-  size(400, 400);
-  background(255);
-  stroke(0);
+  size(1024, 768, P2D);
+  //background(255);
+  //stroke(0);
   //MidiBus.list(); // List all available Midi devices on STDOUT. This will show each device's index and name.
 
   //                 Parent  In        Out
@@ -38,7 +39,7 @@ void setup() {
   abletonEventNoteNumber = 0; // Magic number
   // Setup orientation board
   controller_setup();
-
+  setupUI();
   // Trigger first event
 
   myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
@@ -52,11 +53,7 @@ void draw() {
   if(currentNotes.hasBeenCompletelyFullfilled() && currentNotes.size() > 0){
     score++;
     //Send MIDI to go to next event in Ableton
-    abletonEventNoteNumber = (abletonEventNoteNumber + 1)%23;
-    println("New score + " + score + " Next note: " + abletonEventNoteNumber);
-    myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
-    //delay(100);
-    myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
+    abletonTrigger = true;
     drawGraphics(true);
     currentNotes.clear();
   }else{
@@ -76,7 +73,7 @@ void draw() {
 
 /**
  *
- */
+
 
 void drawGraphics(Boolean wasCorrect){
 
@@ -92,15 +89,15 @@ void drawGraphics(Boolean wasCorrect){
 
     turnOnLeds(notes);
 }
-
+*/
 void turnOnLeds(int[] notes) {
   byte[] leds = {48,48,48,48,48,48,48,48,48,48,48,48,48,48,48,48};
   for (int note : notes) {
     leds[(note*2)+1] = 49;
   }
-  println("serialoutput: " + new String(leds));
-
-  controlSerial.write(leds);
+  //println("serialoutput: " + new String(leds));
+  if(controlSerial != null)
+    controlSerial.write(leds);
 }
 
 Targets getPlayerState(){
@@ -156,7 +153,7 @@ void midiMessage(MidiMessage message) {
   // Message from Game logic
   switch(status - GAME_CH){
     case PITCHBEND:
-      val = (data[2] << 7) | data[1] - 8192; // We need to combine the two bytes to form pitchbend value
+      val = Math.abs((data[2] << 7) | data[1]) - 8192; // We need to combine the two bytes to form pitchbend value
       isGameLogic = true;
       type = PITCHBEND;
       //println("GAME: Pitchbend " + val);
@@ -235,7 +232,7 @@ void noteOn(int channel, int pitch, int velocity) {
     //Add to playerState
     updatePlayerState(newEvent, true);
 
-    /* THIS WAS MOVED TO NOTE OFF
+    //THIS WAS MOVED TO NOTE OFF
     //Check if the played notes are what we are looking for
     println("CTRL: Checking for correct note: " + pitch);
     gameEvent listElement = currentNotes.contains(newEvent);
@@ -245,7 +242,7 @@ void noteOn(int channel, int pitch, int velocity) {
     }else{
       //print("NO\n");
     }
-    */
+
   }
 }
 
@@ -260,18 +257,18 @@ void noteOff(int channel, int pitch, int velocity) {
 
   gameEvent newEvent = new gameEvent(new Note(1, pitch, velocity), null);
 
-  //Remove from the playerState
   if(channel == CTRL_CH){
-    //Check if the played notes are what we are looking for
-    //println("CTRL: Checking for correct note: " + pitch);
-    gameEvent listElement = currentNotes.contains(newEvent);
-    if(listElement != null){
-      //print("YES\n");
-      listElement.match();
-    }else{
-      //print("NO\n");
+    // Send the note to Ableton
+    if(abletonTrigger){
+      abletonEventNoteNumber = (abletonEventNoteNumber + 1)%23;
+      myBus.sendNoteOn(ABLETON_CH, abletonEventNoteNumber, 127);
+      //delay(100);
+      myBus.sendNoteOff(ABLETON_CH, abletonEventNoteNumber, 127);
+      println("New score + " + score + " Next note: " + abletonEventNoteNumber);
+      abletonTrigger = false;
     }
 
+    //Remove from the playerState
     updatePlayerState(new gameEvent(new Note(1, pitch, velocity),null), false);
   }
   /*

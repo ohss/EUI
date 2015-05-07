@@ -17,12 +17,7 @@ public static final int BEND_RANGE = 6;
 
 public static final int PITCHBEND_ITER_COUNT = 6;
 
-<<<<<<< HEAD
 public static final float SHAKE_THRESHOLD = 25.0;
-=======
-public static final float SHAKE_THRESHOLD = 15.0;
->>>>>>> d5c31a5855cfc9ea060a5b8c9b87918acc44250d
-
 
 String rollRaw, pitchRaw, yawRaw;
 String gyroX, gyroY, gyroZ;
@@ -348,7 +343,7 @@ void orientationSerialEvent (Serial serial) {
   serial.clear(); // Clear buffer
 
   float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
-  println("Shake speed: " + speed);
+  //println("Shake speed: " + speed);
   if (speed > SHAKE_THRESHOLD) {
     println("---------------It's shaking---------------");
   }
