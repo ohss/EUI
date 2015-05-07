@@ -5,7 +5,7 @@ Serial controlSerial;
 public static final int NOTE_ON_THRESHOLD = 500;
 public static final int NOTE_OFF_THRESHOLD = -130;
 public static final float NOTE_OFF_RELATIVE_THRESHOLD = 1.0;
-public static final int AFTER_TOUCH_ITER_COUNT = 66;
+public static final int AFTER_TOUCH_ITER_COUNT = 46;
 public static final float AFTER_TOUCH_SCALE = 127.0/2500.0;
 public static final int BEND_UP_ON_THRESHOLD = -500;
 public static final int BEND_UP_OFF_THRESHOLD = 240;
@@ -295,69 +295,70 @@ void orientationSerialEvent (Serial serial) {
     println("Wrong length: " + input.length);
     return;
   }
+  if(serialCounter > 200){
+    // Get the ASCII strings:
+    rollRaw = input[0];
+    gyroX = input[1];
+    compX = input[2];
+    kalmanX = input[3];
 
-  // Get the ASCII strings:
-  rollRaw = input[0];
-  gyroX = input[1];
-  compX = input[2];
-  kalmanX = input[3];
+    // Ignore extra tab
+    pitchRaw = input[5];
+    gyroY = input[6];
+    compY = input[7];
+    kalmanY = input[8];
 
-  // Ignore extra tab
-  pitchRaw = input[5];
-  gyroY = input[6];
-  compY = input[7];
-  kalmanY = input[8];
+    // Ignore extra tab
+    yawRaw = input[10];
+    gyroZ = input[11];
+    compZ = input[12];
+    kalmanZ = input[13];
 
-  // Ignore extra tab
-  yawRaw = input[10];
-  gyroZ = input[11];
-  compZ = input[12];
-  kalmanZ = input[13];
+    if (!firstValue) {
+      old_roll = roll;
+      old_pitch = pitch;
+      old_yaw = yaw;
+    }
 
-  if (!firstValue) {
-    old_roll = roll;
-    old_pitch = pitch;
-    old_yaw = yaw;
+    roll = float(kalmanX); // Show the Kalman values
+    pitch = float(kalmanY);
+    yaw = float(kalmanZ);
+
+    if (firstValue) {
+      rollStart = roll;
+      pitchStart = pitch;
+      yawStart = yaw;
+
+      old_roll = roll;
+      old_pitch = pitch;
+      old_yaw = yaw;
+
+      firstValue  = false;
+    }
+
+    roll -= rollStart;
+    pitch -= pitchStart;
+    yaw -= yawStart;
+
+    serial.clear(); // Clear buffer
+
+    float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
+    //println("Shake speed: " + speed);
+    if (speed > SHAKE_THRESHOLD) {
+      println("---------------It's shaking---------------");
+    }
+
+    last_orientation_measurement = millis();
+
+    int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
+    int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));
+
+    //println("roll: " + roll_midi + " pitch: " + pitch_midi);
+
+    //Send the MIDI data
+    ctrlBus.sendControllerChange(CTRL_CH, 1, pitch_midi);
+    ctrlBus.sendControllerChange(CTRL_CH, 2, roll_midi);
   }
-
-  roll = float(kalmanX); // Show the Kalman values
-  pitch = float(kalmanY);
-  yaw = float(kalmanZ);
-
-  if (firstValue) {
-    rollStart = roll;
-    pitchStart = pitch;
-    yawStart = yaw;
-
-    old_roll = roll;
-    old_pitch = pitch;
-    old_yaw = yaw;
-
-    firstValue  = false;
-  }
-
-  roll -= rollStart;
-  pitch -= pitchStart;
-  yaw -= yawStart;
-
-  serial.clear(); // Clear buffer
-
-  float speed = Math.abs(roll + pitch + yaw - old_roll - old_yaw - old_pitch) / (millis() - last_orientation_measurement) * 100;
-  //println("Shake speed: " + speed);
-  if (speed > SHAKE_THRESHOLD) {
-    println("---------------It's shaking---------------");
-  }
-
-  last_orientation_measurement = millis();
-
-  int pitch_midi = min(127,(int)(abs(pitch)*(127.0/90.0)));
-  int roll_midi = 63 + min(63, (int)(roll*(63.0/90.0)));
-
-  //println("roll: " + roll_midi + " pitch: " + pitch_midi);
-
-  //Send the MIDI data
-  //ctrlBus.sendControllerChange(CTRL_CH, 1, pitch_midi);
-  ctrlBus.sendControllerChange(CTRL_CH, 2, roll_midi);
 }
 
 void keyPressed() {

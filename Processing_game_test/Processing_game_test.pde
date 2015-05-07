@@ -113,13 +113,21 @@ void updatePlayerState(gameEvent e, Boolean isNoteOn){
   if(e.note != null){ // Update notes
     int relativePitch = e.note.relativePitch() % 12;
     int noteIndex = java.util.Arrays.binarySearch(scale, relativePitch);
+    int relativePitch2 = (e.note.relativePitch() % 12) + 12;
+    int noteIndex2 = java.util.Arrays.binarySearch(scale, relativePitch2);
+
     if(isNoteOn){ //Adding note to the list
        //println("Adding note to playerState " + e.note.pitch() % 12);
-       if(noteIndex >= 0){
+       if(noteIndex >= 0 && (e.note.pitch() == (scale[noteIndex]+12*octave))){
          playerNotes.add(new Integer(noteIndex));
+       }else if(noteIndex2 >= 0 && (e.note.pitch() == (scale[noteIndex2 ]+12*octave))){
+         playerNotes.add(new Integer(noteIndex2));
        }
     }else{
-      playerNotes.remove(new Integer(noteIndex));
+      if(noteIndex >= 0 && (e.note.pitch() == (scale[noteIndex]+12*octave)))
+        playerNotes.remove(new Integer(noteIndex));
+      else if(noteIndex2 >= 0 && (e.note.pitch() == (scale[noteIndex2 ]+12*octave)))
+        playerNotes.remove(new Integer(noteIndex2));
     }
   }else if(e.cc != null){  //Update CC portion of player state
     switch(e.cc.type){

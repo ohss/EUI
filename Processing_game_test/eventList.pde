@@ -13,9 +13,14 @@ class eventList {
       if(n.note != null){
         int relativePitch = n.note.relativePitch() % 12;
         int noteIndex = java.util.Arrays.binarySearch(scale, relativePitch);
-        if(noteIndex >= 0){
+        int relativePitch2 = (n.note.relativePitch() % 12)+12;
+        int noteIndex2 = java.util.Arrays.binarySearch(scale, relativePitch2);
+
+        if(noteIndex >= 0 && (n.note.pitch() == (scale[noteIndex]+12*octave))){
           //println("Note + " + relativePitch + " hasIndex " + noteIndex);
           notes.add(new Integer(noteIndex));
+        }else if(noteIndex2 >= 0 && (n.note.pitch() == (scale[noteIndex2]+12*octave))){
+          notes.add(new Integer(noteIndex2));
         }
       }else if(n.cc != null){
         switch(n.cc.type){

@@ -39,20 +39,20 @@ void drawGraphics(Boolean wasCorrect){
     Targets playerState = getPlayerState();
     //println("Player: " + playerState);
     */
-  println((int)frameRate+"fps Targets: " + currentNotes.getTargets() + " " +wasCorrect);
+  //println((int)frameRate+"fps Targets: " + currentNotes.getTargets() + " " +wasCorrect);
   //turnOnLeds(getPlayerState().notes);
 
   clear();
   //println("the ainmation state = " + animateState);
-  if(wasCorrect) // print only when it is true
-    println("The wasCorrect = " +wasCorrect);
+  //if(wasCorrect) // print only when it is true
+  //  println("The wasCorrect = " +wasCorrect);
 
   if(animateState.equals("idle") )
   {
     background(102, 199, 242);
     if(wasCorrect)
     {
-      println("Setting animateState to right");
+      //println("Setting animateState to right");
       //there was right
       animateState = "right";
       PeopleImg.changeState("right");
@@ -82,7 +82,7 @@ void drawGraphics(Boolean wasCorrect){
     }
     else
     {
-      System.out.println("right animate not yet done");
+      //System.out.println("right animate not yet done");
     }
     animateGround.move();
   }
@@ -99,7 +99,7 @@ void drawGraphics(Boolean wasCorrect){
     }
     else
     {
-      System.out.println("wrong animate not yet done!!!!!!!!!!!!!");
+      //System.out.println("wrong animate not yet done!!!!!!!!!!!!!");
     }
   }
 
@@ -221,7 +221,7 @@ class instruction
     else if(state.equals("wrong"))    //wrong state
     {
       for(int i =0 ; i < 8; i++){
-        if(UserPressThisNote(i, targetCommand.notes)){//+1)){
+        if(UserPressThisNote(i, userInput.notes)){//+1)){
           image(WrongNote[i], ringX, ringY, ringWIdth, ringHeight);
         }else if(TargetHaveThisNote(i, targetCommand.notes)){//+1)){
           image(TargetNote[i], ringX, ringY, ringWIdth, ringHeight);
@@ -229,6 +229,33 @@ class instruction
           image(NonTargetNote[i], ringX, ringY, ringWIdth, ringHeight);
         }
       }
+
+
+          //display other
+          int numberPicDisplayed =0;
+
+          //after touch part
+          if(targetCommand.aftertouch >0){
+            image(aftertouch, otherX[numberPicDisplayed], OtherY, otherWeidth, otherHeight);
+            numberPicDisplayed++;
+          }
+          //bend paart
+          if(targetCommand.bend >0){
+            image(bandHarder, otherX[numberPicDisplayed], OtherY, otherWeidth, otherHeight);
+            numberPicDisplayed++;
+          }
+          //orientation x
+          if(targetCommand.orientation[1] != 0){
+            if(targetCommand.orientation[1] >100){  //right
+              //println("Orientation right");
+              image(orientation[0], otherX[numberPicDisplayed], OtherY, otherWeidth, otherHeight);
+              numberPicDisplayed++;
+            }else if(targetCommand.orientation[1] <30){ //left
+              //println("Orientation left");
+              image(orientation[1], otherX[numberPicDisplayed], OtherY, otherWeidth, otherHeight);
+              numberPicDisplayed++;
+            }
+          }
     }
     else if(state.equals("right"))
     {
@@ -323,7 +350,7 @@ class People
       image(wrongImg[CurrentImg], 60, 400, 100*imgRatio, 150*imgRatio);
     }
 
-    if(ImgNumberCount >3)
+    if(ImgNumberCount >0)
     {
       CurrentImg++;
       ImgNumberCount=0;
