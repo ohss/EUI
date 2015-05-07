@@ -1,6 +1,5 @@
-# You should have python 2.7 and virtualenv installed. After that, run:
+# ReFlexiTech MIDI controller
 
-- virtualenv -p python venv
-- source venv/bin/activate
-- brew install portmidi
-- pip install -r requirements.txt
+## Aalto University, ME-E4200 Experimental User Interfaces, Spring 2015
+
+See more a [http://ohss.github.io/EUI/](http://ohss.github.io/EUI/)
