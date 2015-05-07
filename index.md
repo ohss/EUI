@@ -9,6 +9,8 @@ layout: default
 
 ## ReFlexiTech MIDI controller
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/i49_ekqx9xg?rel=0" frameborder="0" allowfullscreen></iframe>
+
 ReFlexiTech is an exercising environment for stoke rehabilitation. It consist of:
 
 * a MIDI contoller made out of garden hose, tape and microcontorllers,
