@@ -9,12 +9,13 @@ layout: default
 
 ## ReFlexiTech MIDI controller
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+ReFlexiTech is an exercising environment for stoke rehabilitation. It consist of:
+
+* a MIDI contoller made out of garden hose, tape and microcontorllers, 
+* software synth of one's choice 
+* and a Processing software handling communication between different modules and presenting a GUI.
+
+Here's some making of images.
 
 ## Hardware
 
@@ -34,9 +35,9 @@ proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 	velostat_sensors_7.jpg
 	velostat_sensors_8.jpg
 	velostat_sensors_9.jpg
-	velostat_sensors_11.jpg
-	velostat_sensors_10.jpg
 	velostat_sensors_12.jpg
+	velostat_sensors_10.jpg
+	velostat_sensors_11.jpg
 	velostat_sensors_13.jpg
 {% endgallery %}
 
@@ -69,8 +70,6 @@ This is the second itereation of the first prototype.
 
 ## Software
 
-How it works
-
 {% gallery software %}
-	system_architecture.jpg
+	system_architecture.jpg:: first iterations of the software architecture 
 {% endgallery %}
